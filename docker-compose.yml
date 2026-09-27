@@ -1,5 +1,8 @@
-# Local infrastructure for ClaimFlow.
-#   docker compose up -d            -> Postgres + Kafka + Kafka UI (run services from your IDE / mvn)
+# ClaimFlow local environment.
+#   docker compose up -d                          -> infrastructure only: Postgres, Kafka, Kafka UI
+#                                                    (run the services from your IDE / java -jar)
+#   docker compose --profile apps up -d --build   -> infrastructure + all 5 services in containers
+#                                                    (API at http://localhost:8000)
 services:
   postgres:
     image: postgres:16-alpine
@@ -57,6 +60,82 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+
+  # ---------------------------------------------------------------- application services (profile: apps)
+  # Inside the compose network services use container names and internal ports (postgres:5432,
+  # kafka:29092), not the host ports. Only the gateway is published: the one public entry point.
+
+  policy-service:
+    profiles: ["apps"]
+    build: { context: ., args: { MODULE: policy-service } }
+    image: claimflow/policy-service:dev
+    environment:
+      PORT: "8081"               # also used by the healthcheck
+      DB_URL: jdbc:postgresql://postgres:5432/policy_db
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck: &health
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${PORT}/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  claim-service:
+    profiles: ["apps"]
+    build: { context: ., args: { MODULE: claim-service } }
+    image: claimflow/claim-service:dev
+    environment:
+      PORT: "8082"               # also used by the healthcheck
+      DB_URL: jdbc:postgresql://postgres:5432/claim_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    healthcheck: *health
+
+  validation-service:
+    profiles: ["apps"]
+    build: { context: ., args: { MODULE: validation-service } }
+    image: claimflow/validation-service:dev
+    environment:
+      PORT: "8083"               # also used by the healthcheck
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      POLICY_SERVICE_URL: http://policy-service:8081
+    depends_on:
+      kafka: { condition: service_healthy }
+      policy-service: { condition: service_healthy }
+    healthcheck: *health
+
+  payment-service:
+    profiles: ["apps"]
+    build: { context: ., args: { MODULE: payment-service } }
+    image: claimflow/payment-service:dev
+    environment:
+      PORT: "8084"               # also used by the healthcheck
+      DB_URL: jdbc:postgresql://postgres:5432/payment_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    healthcheck: *health
+
+  api-gateway:
+    profiles: ["apps"]
+    build: { context: ., args: { MODULE: api-gateway } }
+    image: claimflow/api-gateway:dev
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"               # also used by the healthcheck
+      POLICY_SERVICE_URL: http://policy-service:8081
+      CLAIM_SERVICE_URL: http://claim-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+    depends_on:
+      policy-service: { condition: service_healthy }
+      claim-service: { condition: service_healthy }
+      payment-service: { condition: service_healthy }
+    healthcheck: *health
 
 volumes:
   postgres-data:

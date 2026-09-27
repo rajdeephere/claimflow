@@ -76,6 +76,8 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Coverage terms carried in events | [0025](adr/0025-event-carried-coverage-terms.md) |
 | Optimistic locking (409) + ETag/If-Match (412) | [0011](adr/0011-optimistic-locking-on-claims.md), [0026](adr/0026-conditional-updates-with-etag-if-match.md) |
 | Composite index `(policy_id, status, created_at DESC)` | [0027](adr/0027-composite-index-claims-policy-status-created.md) |
+| Layered non-root images from one Dockerfile | [0028](adr/0028-container-images.md) |
+| CI: unit → integration → coverage → images | [0029](adr/0029-ci-pipeline.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -97,6 +99,9 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | 9092 | Kafka |
 | 8090 | Kafka UI |
 
+In Docker (`--profile apps`) only the gateway (8000) is published; services talk over the compose
+network by name (`policy-service:8081`, `postgres:5432`, `kafka:29092`).
+
 ## Change log
 
 | Phase | Architecture changes |
@@ -104,6 +109,7 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
 | 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
 | 3 | Claim Service implemented (`claim_db`, state machine, audit trail, idempotent FNOL, adjusters); `common` gains `ClockConfig`, `PageResponse`, method-validation errors |
+| 8 | Containerised: one layered non-root Dockerfile, `docker compose --profile apps` runs all 5 services; GitHub Actions pipeline (unit → integration → coverage → images) |
 | 7 | Lost-update protection: `@Version` → 409, ETag/If-Match → 412; composite index for the claims work-queue query, benchmarked with EXPLAIN ANALYZE on 500k rows and guarded by a plan test |
 | 6 | Payment Service implemented: consumes `ClaimApproved`, BigDecimal settlement, idempotent payment via simulated gateway, publishes `PaymentInitiated`/`Completed`/`Failed` via outbox. **Full lifecycle runs end to end.** Claim Service stores coverage terms and forwards them in `ClaimApproved` |
 | 5 | Validation Service implemented: consumes `ClaimSubmitted`, REST coverage-check to Policy Service, 5 pluggable rules, publishes validation results with deterministic IDs; dependency outages retried for minutes |

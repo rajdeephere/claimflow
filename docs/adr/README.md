@@ -33,5 +33,7 @@ To add one, copy [`template.md`](template.md).
 | [0025](0025-event-carried-coverage-terms.md) | Coverage terms travel with the events | Accepted | 6 |
 | [0026](0026-conditional-updates-with-etag-if-match.md) | Conditional updates with ETag / If-Match | Accepted | 7 |
 | [0027](0027-composite-index-claims-policy-status-created.md) | Composite index for claims by policy + status | Accepted | 7 |
+| [0028](0028-container-images.md) | One parameterised, layered, non-root Dockerfile | Accepted | 8 |
+| [0029](0029-ci-pipeline.md) | CI pipeline stages and the unit/integration split | Accepted | 8 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

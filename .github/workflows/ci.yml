@@ -1,0 +1,92 @@
+# Git push -> Build -> Unit tests -> Integration tests -> Quality checks -> Docker build -> Image
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch cancels the run that is now out of date.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, test, coverage
+    runs-on: ubuntu-latest   # has Docker, which Testcontainers needs
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build + unit tests
+        run: mvn -B -ntp test
+
+      - name: Integration tests (Testcontainers PostgreSQL + Kafka) + coverage report
+        run: mvn -B -ntp verify -Dskip.unit=true
+
+      - name: Test summary
+        if: always()
+        run: |
+          {
+            echo "### Test results"
+            echo "| Module | Unit | Integration |"
+            echo "|---|---|---|"
+            for m in common policy-service claim-service validation-service payment-service; do
+              count() { cat $1/TEST-*.xml 2>/dev/null | grep -o '<testsuite [^>]*tests="[0-9]*"' | grep -o 'tests="[0-9]*"' | grep -o '[0-9]*' | awk '{s+=$1} END {print s+0}'; }
+              echo "| $m | $(count $m/target/surefire-reports) | $(count $m/target/failsafe-reports) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          retention-days: 7
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: "**/target/site/jacoco/"
+          retention-days: 7
+
+  docker:
+    name: Docker image (${{ matrix.module }})
+    needs: build-and-test   # only build images from code that passed every test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [api-gateway, policy-service, claim-service, validation-service, payment-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: MODULE=${{ matrix.module }}
+          tags: claimflow/${{ matrix.module }}:${{ github.sha }}
+          # Build only. To publish to GitHub Container Registry: add "packages: write" permission,
+          # log in with docker/login-action, tag ghcr.io/<owner>/..., and set push: true on main.
+          push: false
+          cache-from: type=gha,scope=${{ matrix.module }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.module }}
