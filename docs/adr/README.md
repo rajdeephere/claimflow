@@ -35,5 +35,6 @@ To add one, copy [`template.md`](template.md).
 | [0027](0027-composite-index-claims-policy-status-created.md) | Composite index for claims by policy + status | Accepted | 7 |
 | [0028](0028-container-images.md) | One parameterised, layered, non-root Dockerfile | Accepted | 8 |
 | [0029](0029-ci-pipeline.md) | CI pipeline stages and the unit/integration split | Accepted | 8 |
+| [0030](0030-api-versioning-and-openapi-contracts.md) | API versioning and versioned OpenAPI contracts | Accepted | post-8 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

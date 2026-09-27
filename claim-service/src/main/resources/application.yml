@@ -36,6 +36,11 @@ spring:
       ack-mode: record                # commit each offset right after its record is processed
 
 claimflow:
+  api:
+    title: "ClaimFlow Claim API"
+    description: "First Notice of Loss, the claim lifecycle, adjusters and the audit trail (ClaimCenter-like). Supports Idempotency-Key on FNOL and ETag/If-Match on changes."
+    version: 1.0.0                       # contract version of /api/v1 (ADR-0030)
+    server-url: ${API_SERVER_URL:http://localhost:8000}
   outbox:
     poll-interval-ms: 500
     batch-size: 100
@@ -43,6 +48,9 @@ claimflow:
     retry:
       initial-interval-ms: 500
       max-retries: 3
+
+springdoc:
+  default-produces-media-type: application/json
 
 management:
   endpoints:

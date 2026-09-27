@@ -18,6 +18,16 @@ spring:
   flyway:
     enabled: true
 
+claimflow:
+  api:
+    title: "ClaimFlow Policy API"
+    description: "Customers, policies and coverages (PolicyCenter-like), including the coverage check used by claim validation."
+    version: 1.0.0                       # contract version of /api/v1 (ADR-0030)
+    server-url: ${API_SERVER_URL:http://localhost:8000}
+
+springdoc:
+  default-produces-media-type: application/json
+
 management:
   endpoints:
     web:

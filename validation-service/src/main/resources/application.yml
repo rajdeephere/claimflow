@@ -35,6 +35,13 @@ claimflow:
       # Policy Service unavailable: keep retrying (blocking the partition) instead of dead-lettering.
       dependency-max-elapsed-ms: 600000
 
+# No public API (it only consumes Kafka events), so no OpenAPI / Swagger UI.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 management:
   endpoints:
     web:

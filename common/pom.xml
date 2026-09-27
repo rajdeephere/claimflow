@@ -30,6 +30,13 @@
             <artifactId>spring-data-commons</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Shared OpenAPI definition (version, servers, error schema, correlation header). Optional:
+             services bring springdoc themselves; the config is @ConditionalOnClass. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- For mapping OptimisticLockingFailureException to 409. Optional: every service that can throw
              it (JPA, Kafka) already has spring-tx. -->
         <dependency>
@@ -50,4 +57,21 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- test-jar: shares test helpers (OpenApiContract) with the services -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

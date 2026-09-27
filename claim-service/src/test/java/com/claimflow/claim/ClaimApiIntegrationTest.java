@@ -187,4 +187,10 @@ class ClaimApiIntegrationTest extends AbstractIntegrationTest {
         assertThat(page.get("content").get(0).get("id").asText()).isEqualTo(newer);
         assertThat(page.get("content").get(1).get("id").asText()).isEqualTo(older);
     }
+
+    @Test
+    void publishedOpenApiContractIsUpToDate() throws Exception {
+        String live = http.getForObject("/v3/api-docs/v1", String.class);
+        com.claimflow.common.openapi.OpenApiContract.assertMatchesCommittedContract(live, "claim-service");
+    }
 }

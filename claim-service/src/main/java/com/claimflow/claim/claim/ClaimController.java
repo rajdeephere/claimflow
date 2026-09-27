@@ -4,9 +4,12 @@ import com.claimflow.claim.claim.dto.ClaimResponse;
 import com.claimflow.claim.claim.dto.FnolRequest;
 import com.claimflow.claim.claim.dto.HistoryResponse;
 import com.claimflow.claim.claim.dto.UpdateStatusRequest;
+import com.claimflow.common.openapi.ApiErrors;
 import com.claimflow.common.web.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -51,6 +54,8 @@ public class ClaimController {
     }
 
     @PostMapping
+    @ApiResponse(responseCode = "201", description = "Created", headers = @Header(name = "Location", description = "URL of the new resource"))
+    @ApiResponse(responseCode = "200", description = "Replay: this Idempotency-Key was already used; the original claim is returned and nothing new is created")
     @Operation(summary = "File a claim (First Notice of Loss)",
             description = "Send an Idempotency-Key to make retries safe: a repeated key returns the original claim with 200.")
     public ResponseEntity<ClaimResponse> fileFnol(
@@ -69,6 +74,8 @@ public class ClaimController {
     }
 
     @GetMapping("/{claimId}")
+    @ApiResponse(responseCode = "200", description = "OK", headers = @Header(name = "ETag", description = "Current version; send it back as If-Match"))
+    @ApiErrors({404})
     @Operation(summary = "Get a claim", description = "The ETag header is the claim's version; send it back as If-Match.")
     public ResponseEntity<ClaimResponse> get(@PathVariable UUID claimId) {
         return withETag(service.get(claimId));
@@ -85,6 +92,8 @@ public class ClaimController {
     }
 
     @PatchMapping("/{claimId}/status")
+    @ApiResponse(responseCode = "200", description = "OK", headers = @Header(name = "ETag", description = "Current version; send it back as If-Match"))
+    @ApiErrors({404, 409, 412, 422})
     @Operation(summary = "Move a claim to a new status (approve, reject, close)",
             description = "Optional If-Match: the ETag from GET. 412 if the claim changed since.")
     public ResponseEntity<ClaimResponse> updateStatus(
@@ -95,6 +104,8 @@ public class ClaimController {
     }
 
     @PostMapping("/{claimId}/assign-adjuster")
+    @ApiResponse(responseCode = "200", description = "OK", headers = @Header(name = "ETag", description = "Current version; send it back as If-Match"))
+    @ApiErrors({404, 409, 412, 422})
     @Operation(summary = "Assign (or reassign) an adjuster")
     public ResponseEntity<ClaimResponse> assignAdjuster(
             @PathVariable UUID claimId, @Valid @RequestBody AssignAdjusterRequest request,
@@ -108,6 +119,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{claimId}/history")
+    @ApiErrors({404})
     @Operation(summary = "Audit trail of the claim, oldest first")
     public List<HistoryResponse> history(@PathVariable UUID claimId) {
         return service.history(claimId).stream().map(HistoryResponse::from).toList();

@@ -2,6 +2,7 @@
 
 > Living document, one section per service. All public endpoints are reached through the gateway
 > at `http://localhost:8000`. Interactive docs: each service's `/swagger-ui/index.html`.
+> **Postman collection** with every endpoint, an end-to-end journey and every error status: [`postman/`](../postman/README.md).
 
 ## Conventions
 
@@ -17,6 +18,23 @@
 | Dates | ISO-8601: `2026-03-10` (dates), `2026-09-27T07:56:44Z` (instants, UTC) |
 | Tracing | `X-Correlation-ID` accepted on every request and always returned |
 | Concurrency | `ETag: "<version>"` on claim reads/writes; send `If-Match` on changes; 412 if stale (ADR-0026) |
+
+## Versioning and OpenAPI
+
+- **URI major version** (`/api/v1`); a breaking change gets `/api/v2` alongside v1 ([ADR-0030](adr/0030-api-versioning-and-openapi-contracts.md)).
+- **Contract version** `1.0.0` in each OpenAPI `info.version`: minor for additions, patch for doc fixes.
+- **Published contracts:** [`docs/openapi/`](openapi/README.md), one `*.v1.json` per service, checked by
+  the build: an API change without a regenerated contract fails `mvn verify`.
+- **Swagger UI:** `http://localhost:8000/swagger-ui.html` (gateway, all services in one dropdown).
+
+| Breaking (needs v2) | Non-breaking (v1, minor bump) |
+|---|---|
+| remove/rename a field or endpoint | add an endpoint |
+| make an optional field required | add an optional request field |
+| change a type, format or scale | add a response field |
+| change what a status code means | add an error status to an existing endpoint* |
+
+\* only if clients already handle unknown 4xx generically, as ours do via `ApiError`.
 
 ## Error model
 

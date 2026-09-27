@@ -61,6 +61,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.claimflow</groupId>
+            <artifactId>common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <!-- The JDK's HttpURLConnection (TestRestTemplate's default) cannot send PATCH;
              with Apache HttpClient 5 on the classpath TestRestTemplate uses it instead. -->
         <dependency>

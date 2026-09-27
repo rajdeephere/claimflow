@@ -249,4 +249,10 @@ class PaymentKafkaIntegrationTest {
         assertThat(http.getForEntity("/api/v1/payments?claimId=" + UUID.randomUUID(), JsonNode.class).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void publishedOpenApiContractIsUpToDate() throws Exception {
+        String live = http.getForObject("/v3/api-docs/v1", String.class);
+        com.claimflow.common.openapi.OpenApiContract.assertMatchesCommittedContract(live, "payment-service");
+    }
 }

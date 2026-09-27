@@ -36,6 +36,11 @@ spring:
       ack-mode: record
 
 claimflow:
+  api:
+    title: "ClaimFlow Payment API"
+    description: "Settlements and payments (BillingCenter-like). Read-only: payments are created from ClaimApproved events."
+    version: 1.0.0                       # contract version of /api/v1 (ADR-0030)
+    server-url: ${API_SERVER_URL:http://localhost:8000}
   outbox:
     poll-interval-ms: 500
     batch-size: 100
@@ -51,6 +56,9 @@ claimflow:
     gateway:
       latency-ms: 200              # simulated bank transfer time
       decline-above: 1000000.00    # simulated bank limit: larger transfers are declined
+
+springdoc:
+  default-produces-media-type: application/json
 
 management:
   endpoints:

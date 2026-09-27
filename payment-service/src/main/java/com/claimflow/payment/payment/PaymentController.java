@@ -1,6 +1,7 @@
 package com.claimflow.payment.payment;
 
 import com.claimflow.common.error.ResourceNotFoundException;
+import com.claimflow.common.openapi.ApiErrors;
 import com.claimflow.payment.settlement.Settlement;
 import com.claimflow.payment.settlement.SettlementRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +42,7 @@ public class PaymentController {
 
     @GetMapping("/{paymentId}")
     @Transactional(readOnly = true)
+    @ApiErrors({404})
     @Operation(summary = "Get a payment with its settlement breakdown")
     public PaymentResponse get(@PathVariable UUID paymentId) {
         return toResponse(payments.findById(paymentId)
@@ -49,6 +51,7 @@ public class PaymentController {
 
     @GetMapping
     @Transactional(readOnly = true)
+    @ApiErrors({404})
     @Operation(summary = "The payment of a claim (at most one per claim)")
     public PaymentResponse forClaim(@RequestParam UUID claimId) {
         return toResponse(payments.findByClaimId(claimId)

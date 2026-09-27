@@ -1,7 +1,10 @@
 package com.claimflow.claim.adjuster;
 
 import com.claimflow.common.error.ConflictException;
+import com.claimflow.common.openapi.ApiErrors;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -45,6 +48,8 @@ public class AdjusterController {
 
     @PostMapping
     @Transactional
+    @ApiResponse(responseCode = "201", description = "Created", headers = @Header(name = "Location", description = "URL of the new resource"))
+    @ApiErrors({409})
     @Operation(summary = "Register a claims adjuster")
     public ResponseEntity<AdjusterResponse> create(@Valid @RequestBody CreateAdjusterRequest request) {
         String email = request.email().toLowerCase();

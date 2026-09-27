@@ -57,6 +57,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.claimflow</groupId>
+            <artifactId>common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <!-- Integration tests run against a real PostgreSQL in Docker, not H2:
              same SQL dialect, same constraints, same Flyway migrations as production. -->
         <dependency>

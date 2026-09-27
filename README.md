@@ -49,7 +49,8 @@ curl localhost:8000/api/v1/payments?claimId=<id>
 curl localhost:8000/api/v1/claims/<id>/history                       # full audit trail
 ```
 
-- Swagger UI per service: `http://localhost:808x/swagger-ui/index.html` (Option B)
+- **Postman:** import `postman/ClaimFlow.postman_collection.json` + `postman/ClaimFlow-local.postman_environment.json` ([guide](postman/README.md)): every API, an end-to-end journey and every error status, with assertions
+- **Swagger UI (all services):** `http://localhost:8000/swagger-ui.html`; versioned contracts in [`docs/openapi/`](docs/openapi/README.md), checked by the build
 - Send `X-Correlation-ID` on any request: it is echoed back and appears in every service's logs.
 
 > Postgres is mapped to host port **5433** and the gateway runs on **8000** because 5432 and 8080
@@ -58,13 +59,15 @@ curl localhost:8000/api/v1/claims/<id>/history                       # full audi
 ## Tests and CI
 
 ```bash
-mvn test                       # 185 unit tests, no Docker needed (~45 s)
-mvn verify                     # + 35 integration tests on Testcontainers PostgreSQL & Kafka, + JaCoCo coverage
+mvn test                       # 188 unit tests, no Docker needed (~45 s)
+mvn verify                     # + 39 integration tests on Testcontainers PostgreSQL & Kafka (incl. 3 OpenAPI contract checks), + JaCoCo coverage
+npx newman run postman/ClaimFlow.postman_collection.json -e postman/ClaimFlow-local.postman_environment.json   # API tests against the running stack
 ```
 
 GitHub Actions (`.github/workflows/ci.yml`) on every push and pull request:
-**build → unit tests → integration tests → coverage → Docker image per service** (images only built
-if all tests pass). Test counts are written to the job summary; coverage and failed-test reports are
+**build → unit tests → integration tests → coverage → Docker image per service**, plus an **API-test job**
+that starts the whole stack with Docker Compose and runs the Postman collection with Newman (images and
+API tests only run if all unit and integration tests pass). Test counts are written to the job summary; coverage and failed-test reports are
 uploaded as artifacts.
 
 ## Documentation
@@ -73,6 +76,7 @@ uploaded as artifacts.
 - [System design](docs/system-design.md): requirements, flows, data model, events, failure handling
 - [Database design](docs/database-design.md) · [API design](docs/api-design.md)
 - [Kafka events](docs/kafka-events.md) · [Failure handling](docs/failure-handling.md) · [SQL performance](docs/sql-performance.md)
+- [OpenAPI contracts (v1)](docs/openapi/README.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - Phase notes: [docs/phases/](docs/phases/)
 
@@ -86,4 +90,4 @@ uploaded as artifacts.
 - [x] [Phase 6 — Payment Service](docs/phases/phase-06-payment-service.md): settlement, idempotent payments, full lifecycle end to end
 - [x] [Phase 7 — Concurrency & SQL performance](docs/phases/phase-07-enterprise.md): @Version 409, ETag/If-Match 412, composite index (49.9 ms → 0.079 ms). JWT deferred
 - [x] [Phase 8 — Docker & CI](docs/phases/phase-08-docker-ci.md): layered non-root images, compose `apps` profile, GitHub Actions pipeline
-- [x] Phase 9 — Docs: maintained phase by phase (architecture, system design, 29 ADRs, database, API, events, failure handling, SQL performance)
+- [x] Phase 9 — Docs: maintained phase by phase (architecture, system design, 30 ADRs, database, API, events, failure handling, SQL performance)

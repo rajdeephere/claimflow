@@ -27,6 +27,39 @@ spring:
             - Path=/api/v1/payments/**
         # validation-service is internal (Kafka-driven): intentionally not exposed through the gateway
 
+        # Each service's versioned OpenAPI document, proxied so the gateway's Swagger UI can show them all
+        # (a path outside /v3/api-docs, which the gateway's own springdoc endpoints own).
+        - id: policy-api-docs
+          uri: ${POLICY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api-docs/policy-service
+          filters:
+            - SetPath=/v3/api-docs/v1
+        - id: claim-api-docs
+          uri: ${CLAIM_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api-docs/claim-service
+          filters:
+            - SetPath=/v3/api-docs/v1
+        - id: payment-api-docs
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api-docs/payment-service
+          filters:
+            - SetPath=/v3/api-docs/v1
+
+# http://localhost:8000/swagger-ui.html : one UI, a dropdown per service, "Try it out" goes through this gateway
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Claim API v1
+        url: /api-docs/claim-service
+      - name: Policy API v1
+        url: /api-docs/policy-service
+      - name: Payment API v1
+        url: /api-docs/payment-service
+    urls-primary-name: Claim API v1
+
 management:
   endpoints:
     web:

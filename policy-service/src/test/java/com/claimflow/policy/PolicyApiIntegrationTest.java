@@ -98,6 +98,21 @@ class PolicyApiIntegrationTest {
     }
 
     @Test
+    void createResponseShowsMoneyWithTwoDecimalsWhateverScaleTheClientSent() {
+        // BUG-017: found with Postman. The create response used to echo the client's scale (500000.0, 20000)
+        UUID customerId = createCustomer("scale-" + UUID.randomUUID() + "@example.com");
+        String body = "{\"customerId\":\"" + customerId + "\",\"productType\":\"MOTOR\",\"startDate\":\"2026-01-01\","
+                + "\"endDate\":\"2026-12-31\",\"premium\":12000,\"coverages\":[{\"coverageType\":\"COLLISION\","
+                + "\"limitAmount\":500000.0,\"deductible\":20000}]}";
+        org.springframework.http.HttpHeaders h = new org.springframework.http.HttpHeaders();
+        h.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+        String created = http.postForObject("/api/v1/policies", new org.springframework.http.HttpEntity<>(body, h), String.class);
+
+        assertThat(created).contains("\"premium\":12000.00", "\"limitAmount\":500000.00", "\"deductible\":20000.00");
+    }
+
+    @Test
     void duplicateCustomerEmailIsConflict() {
         String email = "dup-" + UUID.randomUUID() + "@example.com";
         createCustomer(email);
@@ -129,5 +144,11 @@ class PolicyApiIntegrationTest {
                 JsonNode.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void publishedOpenApiContractIsUpToDate() throws Exception {
+        String live = http.getForObject("/v3/api-docs/v1", String.class);
+        com.claimflow.common.openapi.OpenApiContract.assertMatchesCommittedContract(live, "policy-service");
     }
 }

@@ -1,9 +1,12 @@
 package com.claimflow.policy.policy;
 
+import com.claimflow.common.openapi.ApiErrors;
 import com.claimflow.policy.policy.dto.CoverageCheckResponse;
 import com.claimflow.policy.policy.dto.CreatePolicyRequest;
 import com.claimflow.policy.policy.dto.PolicyResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -34,6 +37,8 @@ public class PolicyController {
     }
 
     @PostMapping("/policies")
+    @ApiResponse(responseCode = "201", description = "Created", headers = @Header(name = "Location", description = "URL of the new resource"))
+    @ApiErrors({422})
     @Operation(summary = "Issue a policy with its coverages")
     public ResponseEntity<PolicyResponse> create(@Valid @RequestBody CreatePolicyRequest request) {
         Policy policy = service.create(request);
@@ -43,12 +48,14 @@ public class PolicyController {
     }
 
     @GetMapping("/policies/{policyId}")
+    @ApiErrors({404})
     @Operation(summary = "Get a policy with its coverages")
     public PolicyResponse get(@PathVariable UUID policyId) {
         return PolicyResponse.from(service.get(policyId));
     }
 
     @GetMapping("/customers/{customerId}/policies")
+    @ApiErrors({404})
     @Operation(summary = "List a customer's policies, newest first")
     public List<PolicyResponse> listForCustomer(@PathVariable UUID customerId) {
         return service.listForCustomer(customerId).stream().map(PolicyResponse::from).toList();
@@ -57,12 +64,14 @@ public class PolicyController {
     // An action on the resource rather than a PATCH of "status": cancelling is a business operation
     // with its own rules, not a free-form field update.
     @PostMapping("/policies/{policyId}/cancel")
+    @ApiErrors({404, 409})
     @Operation(summary = "Cancel a policy")
     public PolicyResponse cancel(@PathVariable UUID policyId) {
         return PolicyResponse.from(service.cancel(policyId));
     }
 
     @GetMapping("/policies/{policyId}/coverage-check")
+    @ApiErrors({404})
     @Operation(summary = "Is the policy in force and does it cover this loss type on the incident date?")
     public CoverageCheckResponse checkCoverage(
             @PathVariable UUID policyId,

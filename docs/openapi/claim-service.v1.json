@@ -1,0 +1,950 @@
+{
+  "components" : {
+    "parameters" : {
+      "CorrelationId" : {
+        "description" : "Optional. Traces the request across services and Kafka; generated if absent and always returned in the response header and error bodies.",
+        "in" : "header",
+        "name" : "X-Correlation-ID",
+        "required" : false,
+        "schema" : {
+          "example" : "7f92a1c2-8e32-4e12-b7d2-91a3f8c4d111",
+          "type" : "string"
+        }
+      }
+    },
+    "schemas" : {
+      "AdjusterResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ApiError" : {
+        "properties" : {
+          "correlationId" : {
+            "type" : "string"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "status" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "timestamp" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "violations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FieldViolation"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AssignAdjusterRequest" : {
+        "properties" : {
+          "adjusterId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "adjusterId" ],
+        "type" : "object"
+      },
+      "ClaimResponse" : {
+        "properties" : {
+          "adjusterId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "allowedNextStatuses" : {
+            "items" : {
+              "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "approvedAmount" : {
+            "type" : "number"
+          },
+          "claimNumber" : {
+            "type" : "string"
+          },
+          "claimedAmount" : {
+            "type" : "number"
+          },
+          "coverageLimit" : {
+            "type" : "number"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "deductible" : {
+            "type" : "number"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "incidentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "lossType" : {
+            "enum" : [ "COLLISION", "THEFT", "THIRD_PARTY_LIABILITY", "FIRE", "FLOOD", "HOSPITALIZATION" ],
+            "type" : "string"
+          },
+          "policyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rejectionReason" : {
+            "type" : "string"
+          },
+          "reportedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateAdjusterRequest" : {
+        "properties" : {
+          "email" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "name" ],
+        "type" : "object"
+      },
+      "FieldViolation" : {
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FnolRequest" : {
+        "properties" : {
+          "claimedAmount" : {
+            "exclusiveMinimum" : false,
+            "minimum" : 0.01,
+            "type" : "number"
+          },
+          "description" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "incidentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "lossType" : {
+            "enum" : [ "COLLISION", "THEFT", "THIRD_PARTY_LIABILITY", "FIRE", "FLOOD", "HOSPITALIZATION" ],
+            "type" : "string"
+          },
+          "policyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "claimedAmount", "description", "incidentDate", "lossType", "policyId" ],
+        "type" : "object"
+      },
+      "HistoryResponse" : {
+        "properties" : {
+          "correlationId" : {
+            "type" : "string"
+          },
+          "details" : {
+            "type" : "string"
+          },
+          "eventType" : {
+            "enum" : [ "CLAIM_CREATED", "CLAIM_VALIDATED", "CLAIM_REJECTED", "ADJUSTER_ASSIGNED", "CLAIM_APPROVED", "SETTLEMENT_REQUESTED", "PAYMENT_INITIATED", "PAYMENT_COMPLETED", "PAYMENT_FAILED", "CLAIM_CLOSED" ],
+            "type" : "string"
+          },
+          "newStatus" : {
+            "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+            "type" : "string"
+          },
+          "oldStatus" : {
+            "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+            "type" : "string"
+          },
+          "performedBy" : {
+            "type" : "string"
+          },
+          "timestamp" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseClaimResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClaimResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateStatusRequest" : {
+        "properties" : {
+          "approvedAmount" : {
+            "exclusiveMinimum" : false,
+            "minimum" : 0.01,
+            "type" : "number"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "targetStatus" : {
+            "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "targetStatus" ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "description" : "First Notice of Loss, the claim lifecycle, adjusters and the audit trail (ClaimCenter-like). Supports Idempotency-Key on FNOL and ETag/If-Match on changes.\n\nAPI version **v1** (contract 1.0.0). Breaking changes get a new `/api/v2`; additions keep v1 and bump the minor version.",
+    "license" : {
+      "name" : "Learning project, not for production use"
+    },
+    "title" : "ClaimFlow Claim API",
+    "version" : "1.0.0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/api/v1/adjusters" : {
+      "get" : {
+        "operationId" : "listActive",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AdjusterResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "List active adjusters",
+        "tags" : [ "Adjusters" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateAdjusterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdjusterResponse"
+                }
+              }
+            },
+            "description" : "Created",
+            "headers" : {
+              "Location" : {
+                "description" : "URL of the new resource",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Conflicts with the current state: invalid state transition, duplicate, or a concurrent update"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Register a claims adjuster",
+        "tags" : [ "Adjusters" ]
+      }
+    },
+    "/api/v1/claims" : {
+      "get" : {
+        "operationId" : "listForPolicy",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "policyId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SETTLEMENT_PENDING", "PAYMENT_INITIATED", "SETTLED", "CLOSED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseClaimResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Claims of a policy, optionally filtered by status, newest first",
+        "tags" : [ "Claims" ]
+      },
+      "post" : {
+        "description" : "Send an Idempotency-Key to make retries safe: a repeated key returns the original claim with 200.",
+        "operationId" : "fileFnol",
+        "parameters" : [ {
+          "description" : "Client-generated unique key, e.g. a UUID",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "X-User-Id",
+          "required" : false,
+          "schema" : {
+            "default" : "anonymous",
+            "type" : "string"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FnolRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimResponse"
+                }
+              }
+            },
+            "description" : "Replay: this Idempotency-Key was already used; the original claim is returned and nothing new is created"
+          },
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimResponse"
+                }
+              }
+            },
+            "description" : "Created",
+            "headers" : {
+              "Location" : {
+                "description" : "URL of the new resource",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "File a claim (First Notice of Loss)",
+        "tags" : [ "Claims" ]
+      }
+    },
+    "/api/v1/claims/{claimId}" : {
+      "get" : {
+        "description" : "The ETag header is the claim's version; send it back as If-Match.",
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "claimId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimResponse"
+                }
+              }
+            },
+            "description" : "OK",
+            "headers" : {
+              "ETag" : {
+                "description" : "Current version; send it back as If-Match",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The resource in the URL does not exist"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Get a claim",
+        "tags" : [ "Claims" ]
+      }
+    },
+    "/api/v1/claims/{claimId}/assign-adjuster" : {
+      "post" : {
+        "operationId" : "assignAdjuster",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "claimId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "X-User-Id",
+          "required" : false,
+          "schema" : {
+            "default" : "anonymous",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AssignAdjusterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimResponse"
+                }
+              }
+            },
+            "description" : "OK",
+            "headers" : {
+              "ETag" : {
+                "description" : "Current version; send it back as If-Match",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The resource in the URL does not exist"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Conflicts with the current state: invalid state transition, duplicate, or a concurrent update"
+          },
+          "412" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "`If-Match` does not match the current version: reload (GET) and retry"
+          },
+          "422" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Well-formed but breaks a business rule"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Assign (or reassign) an adjuster",
+        "tags" : [ "Claims" ]
+      }
+    },
+    "/api/v1/claims/{claimId}/history" : {
+      "get" : {
+        "operationId" : "history",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "claimId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HistoryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The resource in the URL does not exist"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Audit trail of the claim, oldest first",
+        "tags" : [ "Claims" ]
+      }
+    },
+    "/api/v1/claims/{claimId}/status" : {
+      "patch" : {
+        "description" : "Optional If-Match: the ETag from GET. 412 if the claim changed since.",
+        "operationId" : "updateStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "claimId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "X-User-Id",
+          "required" : false,
+          "schema" : {
+            "default" : "anonymous",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "$ref" : "#/components/parameters/CorrelationId"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClaimResponse"
+                }
+              }
+            },
+            "description" : "OK",
+            "headers" : {
+              "ETag" : {
+                "description" : "Current version; send it back as If-Match",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Invalid request: malformed body, bad parameter, or failed validation (see `violations`)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The resource in the URL does not exist"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Conflicts with the current state: invalid state transition, duplicate, or a concurrent update"
+          },
+          "412" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "`If-Match` does not match the current version: reload (GET) and retry"
+          },
+          "422" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Well-formed but breaks a business rule"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Unexpected error (details are logged, never returned)"
+          }
+        },
+        "summary" : "Move a claim to a new status (approve, reject, close)",
+        "tags" : [ "Claims" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "description" : "API gateway (local)",
+    "url" : "http://localhost:8000"
+  } ]
+}
