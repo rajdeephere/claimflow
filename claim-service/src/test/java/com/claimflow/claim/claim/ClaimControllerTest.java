@@ -85,7 +85,7 @@ class ClaimControllerTest {
     @Test
     void invalidTransitionIs409() throws Exception {
         UUID id = UUID.randomUUID();
-        when(service.updateStatus(eq(id), any(), any())).thenThrow(
+        when(service.updateStatus(eq(id), any(), any(), any())).thenThrow(
                 new InvalidStateTransitionException("CLM-2026-000001", ClaimStatus.CLOSED, ClaimStatus.APPROVED));
 
         mvc.perform(patch("/api/v1/claims/{id}/status", id).contentType(MediaType.APPLICATION_JSON)

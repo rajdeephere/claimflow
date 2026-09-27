@@ -123,7 +123,7 @@ class ClaimServiceTest {
         when(claims.findById(claim.getId())).thenReturn(Optional.of(claim));
 
         service.updateStatus(claim.getId(),
-                new UpdateStatusRequest(ClaimStatus.APPROVED, new BigDecimal("45000.00"), null), "adj-1");
+                new UpdateStatusRequest(ClaimStatus.APPROVED, new BigDecimal("45000.00"), null), "adj-1", null);
 
         ArgumentCaptor<ClaimHistory> rows = ArgumentCaptor.forClass(ClaimHistory.class);
         verify(history, times(2)).save(rows.capture());
@@ -175,7 +175,7 @@ class ClaimServiceTest {
         when(claims.findById(claim.getId())).thenReturn(Optional.of(claim));
 
         assertThatThrownBy(() -> service.updateStatus(claim.getId(),
-                new UpdateStatusRequest(ClaimStatus.CLOSED, null, null), "adj-1"))
+                new UpdateStatusRequest(ClaimStatus.CLOSED, null, null), "adj-1", null))
                 .isInstanceOf(InvalidStateTransitionException.class);
         verify(history, never()).save(any());
         verify(outbox, never()).append(anyString(), anyString(), any(), any());
@@ -200,7 +200,7 @@ class ClaimServiceTest {
         when(claims.findById(claim.getId())).thenReturn(Optional.of(claim));
         when(adjusters.findById(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assignAdjuster(claim.getId(), unknown, "mgr"))
+        assertThatThrownBy(() -> service.assignAdjuster(claim.getId(), unknown, "mgr", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("does not exist");
     }
@@ -212,7 +212,7 @@ class ClaimServiceTest {
         when(claims.findById(claim.getId())).thenReturn(Optional.of(claim));
         when(adjusters.findById(adjuster.getId())).thenReturn(Optional.of(adjuster));
 
-        service.assignAdjuster(claim.getId(), adjuster.getId(), "mgr");
+        service.assignAdjuster(claim.getId(), adjuster.getId(), "mgr", null);
 
         assertThat(claim.getAdjusterId()).isEqualTo(adjuster.getId());
     }

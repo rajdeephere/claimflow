@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -68,9 +69,9 @@ public class ClaimController {
     }
 
     @GetMapping("/{claimId}")
-    @Operation(summary = "Get a claim")
-    public ClaimResponse get(@PathVariable UUID claimId) {
-        return ClaimResponse.from(service.get(claimId));
+    @Operation(summary = "Get a claim", description = "The ETag header is the claim's version; send it back as If-Match.")
+    public ResponseEntity<ClaimResponse> get(@PathVariable UUID claimId) {
+        return withETag(service.get(claimId));
     }
 
     @GetMapping
@@ -84,17 +85,26 @@ public class ClaimController {
     }
 
     @PatchMapping("/{claimId}/status")
-    @Operation(summary = "Move a claim to a new status (approve, reject, close)")
-    public ClaimResponse updateStatus(@PathVariable UUID claimId, @Valid @RequestBody UpdateStatusRequest request,
-                                      @RequestHeader(value = USER_HEADER, defaultValue = ANONYMOUS) String actor) {
-        return ClaimResponse.from(service.updateStatus(claimId, request, actor));
+    @Operation(summary = "Move a claim to a new status (approve, reject, close)",
+            description = "Optional If-Match: the ETag from GET. 412 if the claim changed since.")
+    public ResponseEntity<ClaimResponse> updateStatus(
+            @PathVariable UUID claimId, @Valid @RequestBody UpdateStatusRequest request,
+            @RequestHeader(value = USER_HEADER, defaultValue = ANONYMOUS) String actor,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return withETag(service.updateStatus(claimId, request, actor, ETags.expectedVersion(ifMatch)));
     }
 
     @PostMapping("/{claimId}/assign-adjuster")
     @Operation(summary = "Assign (or reassign) an adjuster")
-    public ClaimResponse assignAdjuster(@PathVariable UUID claimId, @Valid @RequestBody AssignAdjusterRequest request,
-                                        @RequestHeader(value = USER_HEADER, defaultValue = ANONYMOUS) String actor) {
-        return ClaimResponse.from(service.assignAdjuster(claimId, request.adjusterId(), actor));
+    public ResponseEntity<ClaimResponse> assignAdjuster(
+            @PathVariable UUID claimId, @Valid @RequestBody AssignAdjusterRequest request,
+            @RequestHeader(value = USER_HEADER, defaultValue = ANONYMOUS) String actor,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return withETag(service.assignAdjuster(claimId, request.adjusterId(), actor, ETags.expectedVersion(ifMatch)));
+    }
+
+    private static ResponseEntity<ClaimResponse> withETag(Claim claim) {
+        return ResponseEntity.ok().eTag(ETags.of(claim)).body(ClaimResponse.from(claim));
     }
 
     @GetMapping("/{claimId}/history")

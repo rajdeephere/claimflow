@@ -154,7 +154,7 @@ erDiagram
 |---|---|
 | `idx_claims_adjuster_id` | adjuster workload lookups |
 | `idx_claim_history_claim_created (claim_id, created_at, id)` | `GET /claims/{id}/history` in order |
-| *(Phase 7)* `idx_claim_policy_status_created (policy_id, status, created_at DESC)` | `GET /claims?policyId=&status=`, added with EXPLAIN ANALYZE before/after |
+| `idx_claim_policy_status_created (policy_id, status, created_at DESC)` (V4, Phase 7) | `GET /claims?policyId=&status=`: ordered index scan, no sort; 49.9 ms → 0.079 ms ([sql-performance.md](sql-performance.md)) |
 
 ### Coverage terms (Phase 6, `V3__claim_coverage_terms.sql`)
 

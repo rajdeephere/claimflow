@@ -243,8 +243,9 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | claim-service | `claims`, `claim_history`, `adjusters`, `processed_events` |
 | payment-service | `payments`, `settlements`, `processed_events` |
 
-**Indexing** *(detailed in Phase 7)*: `claims(policy_id, status, created_at DESC)` for the
-"claims for a policy by status, newest first" query; verified with `EXPLAIN ANALYZE`.
+**Indexing** (Phase 7): `claims(policy_id, status, created_at DESC)` serves the "claims for a policy
+by status, newest first" query with an ordered index scan and no sort: 49.9 ms → 0.079 ms for a
+20k-claim fleet policy on 500k rows. See [sql-performance.md](sql-performance.md).
 
 ## 8. API design
 
@@ -296,7 +297,7 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Duplicate or late validation result | Same input gives the same output eventId (ADR-0021), deduped; results for claims no longer SUBMITTED are ignored. |
 | Consumer crashes mid-processing | Offset not committed, so the event is redelivered and the idempotency check prevents double effects. |
 | Poison message (always fails) | After N retries it goes to the DLT; the consumer moves on and the partition doesn't block. |
-| Concurrent claim update | `@Version` optimistic lock returns **409**; the client reloads and retries. |
+| Concurrent claim update | `@Version` optimistic lock returns **409**; a stale `If-Match` returns **412**; the client reloads and retries. Verified with 10-thread races (ADR-0011, ADR-0026). |
 | Payment fails | Declined: payment `FAILED` + `PaymentFailed`, recorded in claim history, claim stays `PAYMENT_INITIATED` for manual review. Gateway unavailable: retried with the same idempotency key up to 5 times, then FAILED. (ADR-0023) |
 | Same approval delivered twice / replayed | 1 payment, 1 bank transfer (processed_events, existing-payment check, UNIQUE, gateway idempotency key). Verified live by replaying the real event. |
 | DB commit succeeds but event publish fails (dual write) | Transactional outbox (ADR-0012): the event is committed with the change and relayed later. Verified with Kafka stopped: FNOL 201, event published after Kafka restarted. |

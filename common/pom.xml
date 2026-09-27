@@ -30,6 +30,13 @@
             <artifactId>spring-data-commons</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- For mapping OptimisticLockingFailureException to 409. Optional: every service that can throw
+             it (JPA, Kafka) already has spring-tx. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- Kafka helpers (correlation interceptor, error handler, topics). Optional: only services
              that use Kafka pull it in; the config is @ConditionalOnClass so others skip it. -->
         <dependency>

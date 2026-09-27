@@ -16,7 +16,7 @@ To add one, copy [`template.md`](template.md).
 | [0008](0008-claim-state-machine-as-domain-enum.md) | Claim state machine as a domain enum | Accepted | 3 |
 | [0009](0009-idempotent-consumers-processed-events.md) | Idempotent Kafka consumers via a processed_events table | Accepted | 4 |
 | [0010](0010-bigdecimal-for-money.md) | BigDecimal and NUMERIC for monetary values | Accepted | 1 |
-| [0011](0011-optimistic-locking-on-claims.md) | Optimistic locking on claims | Proposed | 7 |
+| [0011](0011-optimistic-locking-on-claims.md) | Optimistic locking on claims | Accepted | 7 |
 | [0012](0012-reliable-event-publishing.md) | Reliable event publishing with a transactional outbox | Accepted | 4 |
 | [0013](0013-jwt-authentication-at-gateway.md) | JWT authentication at the gateway, roles in services | Proposed | 7 |
 | [0014](0014-derive-policy-period-state-from-dates.md) | Derive policy period state from dates | Accepted | 2 |
@@ -31,5 +31,7 @@ To add one, copy [`template.md`](template.md).
 | [0023](0023-payment-idempotency-and-gateway-call-outside-transaction.md) | Payment idempotency; gateway call outside the transaction | Accepted | 6 |
 | [0024](0024-duplicate-outbox-code-rule-of-three.md) | Copy the outbox code rather than share it (rule of three) | Accepted | 6 |
 | [0025](0025-event-carried-coverage-terms.md) | Coverage terms travel with the events | Accepted | 6 |
+| [0026](0026-conditional-updates-with-etag-if-match.md) | Conditional updates with ETag / If-Match | Accepted | 7 |
+| [0027](0027-composite-index-claims-policy-status-created.md) | Composite index for claims by policy + status | Accepted | 7 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

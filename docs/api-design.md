@@ -16,6 +16,7 @@
 | Money | JSON numbers with 2 decimals, `BigDecimal` server-side |
 | Dates | ISO-8601: `2026-03-10` (dates), `2026-09-27T07:56:44Z` (instants, UTC) |
 | Tracing | `X-Correlation-ID` accepted on every request and always returned |
+| Concurrency | `ETag: "<version>"` on claim reads/writes; send `If-Match` on changes; 412 if stale (ADR-0026) |
 
 ## Error model
 
@@ -38,7 +39,8 @@ Every service and the gateway return the same body:
 | 400 | The request is malformed or fails validation | missing field, bad UUID, unknown enum, bad date |
 | 404 | The addressed resource doesn't exist | `GET /policies/{unknown}` |
 | 405 / 415 | Wrong method / content type | `DELETE /policies/{id}` |
-| 409 | Conflicts with current state | duplicate email, cancel twice, optimistic lock (Phase 7) |
+| 409 | Conflicts with current state | duplicate email, cancel twice, concurrent update (optimistic lock) |
+| 412 | `If-Match` doesn't match the current version | the user's copy of the claim is stale |
 | 422 | Well-formed, but breaks a business rule | unknown customer in body, FLOOD on a MOTOR policy |
 | 500 | Our bug; details are logged, never returned | – |
 | 503 / 504 | Gateway: downstream down / too slow | – |

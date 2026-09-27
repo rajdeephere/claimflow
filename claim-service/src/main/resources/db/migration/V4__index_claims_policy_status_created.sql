@@ -1,0 +1,11 @@
+-- Serves GET /api/v1/claims?policyId=&status= :
+--   WHERE policy_id = ? AND status = ? ORDER BY created_at DESC FETCH FIRST ? ROWS ONLY
+-- Column order matters: the two equality columns first, then the sort column in the query's direction,
+-- so PostgreSQL reads the first N index entries and stops: no filtering, no sort.
+-- Measured on 500k claims (infra/perf/claims-index-benchmark.sql, docs/sql-performance.md):
+--   fleet policy with 20k claims: 49.9 ms (seq scan) -> 3.7 ms (index on policy_id) -> 0.079 ms (this index)
+--
+-- On a large live table you'd use CREATE INDEX CONCURRENTLY (no write lock), which can't run inside a
+-- transaction: Flyway needs a separate, non-transactional migration for that. At this table size a
+-- regular CREATE INDEX is fine.
+CREATE INDEX idx_claim_policy_status_created ON claims (policy_id, status, created_at DESC);

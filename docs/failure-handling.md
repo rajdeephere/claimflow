@@ -54,6 +54,13 @@
 | `ClaimApproved` without coverage terms (claim validated before Phase 6) | DLT (a human must decide) | integration |
 | Approved amount not above the deductible | refused at approval in Claim Service (422), so it never reaches Payment | unit + live |
 
+## Concurrency (Phase 7)
+
+| Failure | Behaviour | Verified |
+|---|---|---|
+| Two transactions update the same claim at once | `@Version`: the second commit fails; **409** over REST, retried for Kafka consumers | 10-thread race: 2 × 200, 8 × 409, no lost update |
+| User submits based on a stale screen | `If-Match` mismatch: **412**, nothing written | integration + live through the gateway |
+
 ## Dead Letter Topics
 
 - Name: `<original-topic>.DLT`, same partition as the original.
@@ -65,5 +72,4 @@
 
 ## Not yet handled (future phases)
 
-- Concurrent REST update on the same claim: optimistic lock → 409 mapping (Phase 7).
 - DLT alerting and a replay endpoint.

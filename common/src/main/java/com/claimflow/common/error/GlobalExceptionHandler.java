@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -49,6 +50,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI(), List.of());
+    }
+
+    /**
+     * Two transactions updated the same row at the same moment: JPA @Version made the second commit fail
+     * (UPDATE ... WHERE version = ? matched 0 rows) instead of silently overwriting the first.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLock(OptimisticLockingFailureException ex, HttpServletRequest req) {
+        log.info("Concurrent update rejected on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.CONFLICT, "The resource was modified concurrently by another request. Reload and retry.",
+                req.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(PreconditionFailedException.class)
+    public ResponseEntity<ApiError> handlePreconditionFailed(PreconditionFailedException ex, HttpServletRequest req) {
+        return build(HttpStatus.PRECONDITION_FAILED, ex.getMessage(), req.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(BusinessRuleException.class)

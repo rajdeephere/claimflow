@@ -9,6 +9,7 @@ import com.claimflow.claim.history.ClaimHistoryRepository;
 import com.claimflow.claim.outbox.OutboxWriter;
 import com.claimflow.common.correlation.CorrelationId;
 import com.claimflow.common.error.BusinessRuleException;
+import com.claimflow.common.error.PreconditionFailedException;
 import com.claimflow.common.error.ResourceNotFoundException;
 import com.claimflow.common.events.EventTypes;
 import com.claimflow.common.events.Topics;
@@ -128,10 +129,14 @@ public class ClaimService {
 
     // ---- commands ----
 
-    /** User-requested status change (adjuster / claims manager). */
+    /**
+     * User-requested status change (adjuster / claims manager).
+     *
+     * @param expectedVersion the version the user last saw (from If-Match), or null to skip the check
+     */
     @Transactional
-    public Claim updateStatus(UUID claimId, UpdateStatusRequest req, String actor) {
-        Claim claim = get(claimId);
+    public Claim updateStatus(UUID claimId, UpdateStatusRequest req, String actor, Long expectedVersion) {
+        Claim claim = getForUpdate(claimId, expectedVersion);
         StatusChange change = switch (req.targetStatus()) {
             case APPROVED -> claim.approve(req.approvedAmount());
             case REJECTED -> claim.reject(req.reason(), TransitionSource.USER);
@@ -182,14 +187,28 @@ public class ClaimService {
     }
 
     @Transactional
-    public Claim assignAdjuster(UUID claimId, UUID adjusterId, String actor) {
-        Claim claim = get(claimId);
+    public Claim assignAdjuster(UUID claimId, UUID adjusterId, String actor, Long expectedVersion) {
+        Claim claim = getForUpdate(claimId, expectedVersion);
         Adjuster adjuster = adjusters.findById(adjusterId)
                 .orElseThrow(() -> new BusinessRuleException("Adjuster " + adjusterId + " does not exist"));
         if (!adjuster.isActive()) {
             throw new BusinessRuleException("Adjuster " + adjuster.getName() + " is not active");
         }
         record(claim, claim.assignAdjuster(adjusterId), actor);
+        return claim;
+    }
+
+    /**
+     * Two layers against lost updates (ADR-0026):
+     * 1. here: the user's If-Match version must equal the current version -> else 412 (stale screen)
+     * 2. at commit: JPA @Version adds "WHERE version = ?" -> 409 if another transaction committed in between
+     */
+    private Claim getForUpdate(UUID claimId, Long expectedVersion) {
+        Claim claim = get(claimId);
+        if (expectedVersion != null && !expectedVersion.equals(claim.getVersion())) {
+            throw new PreconditionFailedException("Claim " + claim.getClaimNumber() + " has changed since you loaded it"
+                    + " (your version " + expectedVersion + ", current " + claim.getVersion() + "). Reload and retry.");
+        }
         return claim;
     }
 

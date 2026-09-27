@@ -1,7 +1,7 @@
 # Architecture
 
 > Living document, updated at the end of every phase.
-> Deeper reasoning: [System design](system-design.md) · [Database design](database-design.md) · [API design](api-design.md) · [Kafka events](kafka-events.md) · [Failure handling](failure-handling.md) · [ADRs](adr/README.md)
+> Deeper reasoning: [System design](system-design.md) · [Database design](database-design.md) · [API design](api-design.md) · [Kafka events](kafka-events.md) · [Failure handling](failure-handling.md) · [SQL performance](sql-performance.md) · [ADRs](adr/README.md)
 
 ## Overview
 
@@ -74,6 +74,8 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | No double payment: 3 guards + gateway idempotency key, bank call outside the tx | [0023](adr/0023-payment-idempotency-and-gateway-call-outside-transaction.md) |
 | Outbox code copied, not shared (rule of three) | [0024](adr/0024-duplicate-outbox-code-rule-of-three.md) |
 | Coverage terms carried in events | [0025](adr/0025-event-carried-coverage-terms.md) |
+| Optimistic locking (409) + ETag/If-Match (412) | [0011](adr/0011-optimistic-locking-on-claims.md), [0026](adr/0026-conditional-updates-with-etag-if-match.md) |
+| Composite index `(policy_id, status, created_at DESC)` | [0027](adr/0027-composite-index-claims-policy-status-created.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -102,6 +104,7 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
 | 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
 | 3 | Claim Service implemented (`claim_db`, state machine, audit trail, idempotent FNOL, adjusters); `common` gains `ClockConfig`, `PageResponse`, method-validation errors |
+| 7 | Lost-update protection: `@Version` → 409, ETag/If-Match → 412; composite index for the claims work-queue query, benchmarked with EXPLAIN ANALYZE on 500k rows and guarded by a plan test |
 | 6 | Payment Service implemented: consumes `ClaimApproved`, BigDecimal settlement, idempotent payment via simulated gateway, publishes `PaymentInitiated`/`Completed`/`Failed` via outbox. **Full lifecycle runs end to end.** Claim Service stores coverage terms and forwards them in `ClaimApproved` |
 | 5 | Validation Service implemented: consumes `ClaimSubmitted`, REST coverage-check to Policy Service, 5 pluggable rules, publishes validation results with deterministic IDs; dependency outages retried for minutes |
 | 4 | Claim Service is event-driven: transactional outbox → `claim.events`; idempotent consumer of `validation.events` / `payment.events`; retry → DLT; correlation ID in Kafka headers; `common` gains the event contract, Kafka setup and money-safe JSON |
