@@ -10,6 +10,7 @@ public enum HistoryEventType {
     SETTLEMENT_REQUESTED,
     PAYMENT_INITIATED,
     PAYMENT_COMPLETED,
+    PAYMENT_FAILED,
     CLAIM_CLOSED;
 
     /** The audit event recorded when a claim enters {@code status}. */

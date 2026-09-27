@@ -32,6 +32,9 @@
         <maven.compiler.release>17</maven.compiler.release>
         <springdoc.version>2.6.0</springdoc.version>
         <spring-cloud.version>2023.0.3</spring-cloud.version>
+        <!-- Boot 3.3 ships 1.19.8; 1.20+ adds org.testcontainers.kafka.KafkaContainer, which runs the
+             same apache/kafka image as docker-compose (test/prod parity). -->
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
 
     <dependencyManagement>

@@ -156,6 +156,17 @@ erDiagram
 | `idx_claim_history_claim_created (claim_id, created_at, id)` | `GET /claims/{id}/history` in order |
 | *(Phase 7)* `idx_claim_policy_status_created (policy_id, status, created_at DESC)` | `GET /claims?policyId=&status=`, added with EXPLAIN ANALYZE before/after |
 
+### Messaging tables (Phase 4, `V2__outbox_and_processed_events.sql`)
+
+| Table | Purpose | Key points |
+|---|---|---|
+| `outbox_events` | events waiting to be published ([ADR-0012](adr/0012-reliable-event-publishing.md)) | `id` = eventId; `seq BIGSERIAL` gives publish order; `payload` = full JSON envelope; `attempts`, `last_error` for visibility |
+| `processed_events` | events already consumed ([ADR-0009](adr/0009-idempotent-consumers-processed-events.md)) | PK `(event_id, consumer_name)`; written with `INSERT … ON CONFLICT DO NOTHING` |
+
+| Index | Serves |
+|---|---|
+| `idx_outbox_unpublished (seq) WHERE published_at IS NULL` | the relay's `SELECT … ORDER BY seq LIMIT n FOR UPDATE SKIP LOCKED`; a **partial** index stays tiny as published rows accumulate |
+
 ### Audit trail
 
 `claim_history` is append-only (`@Immutable`, columns `updatable = false`) and written in the same

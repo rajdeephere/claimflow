@@ -5,18 +5,13 @@ import com.claimflow.claim.claim.ClaimStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,18 +25,12 @@ import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class ClaimApiIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+class ClaimApiIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     TestRestTemplate http;
     @Autowired
-    ClaimService claimService;   // stands in for the Kafka consumers until Phase 4
+    ClaimService claimService;   // drives system transitions directly; the Kafka path is in ClaimKafkaIntegrationTest
     @Autowired
     JdbcTemplate jdbc;
 
@@ -97,10 +86,11 @@ class ClaimApiIntegrationTest {
         ResponseEntity<JsonNode> approved = patchStatus(claimId,
                 Map.of("targetStatus", "APPROVED", "approvedAmount", "180000.00"), "adj-ravi");
         assertThat(approved.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(approved.getBody().get("status").asText()).isEqualTo("APPROVED");
+        // approval hands the claim straight to payment (APPROVED + SETTLEMENT_PENDING in one transaction)
+        assertThat(approved.getBody().get("status").asText()).isEqualTo("SETTLEMENT_PENDING");
+        assertThat(approved.getBody().get("approvedAmount").decimalValue()).isEqualByComparingTo("180000.00");
 
         // payment steps (system), then closure (user)
-        claimService.applySystemTransition(id, ClaimStatus.SETTLEMENT_PENDING, "Sent to payment");
         claimService.applySystemTransition(id, ClaimStatus.PAYMENT_INITIATED, "Payment P-1");
         claimService.applySystemTransition(id, ClaimStatus.SETTLED, "Paid 180000.00");
         ResponseEntity<JsonNode> closed = patchStatus(claimId, Map.of("targetStatus", "CLOSED"), "adj-ravi");
@@ -117,6 +107,7 @@ class ClaimApiIntegrationTest {
         assertThat(history.get(0).get("correlationId").asText()).isEqualTo("corr-happy");
         assertThat(history.get(1).get("performedBy").asText()).isEqualTo("system");
         assertThat(history.get(3).get("performedBy").asText()).isEqualTo("adj-ravi");
+        assertThat(history.get(4).get("performedBy").asText()).isEqualTo("system");   // hand-off to payment
 
         // CLOSED -> APPROVED is rejected (the spec's example) and nothing is written
         ResponseEntity<JsonNode> reopen = patchStatus(claimId,

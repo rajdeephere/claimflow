@@ -30,6 +30,13 @@
             <artifactId>spring-data-commons</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Kafka helpers (correlation interceptor, error handler, topics). Optional: only services
+             that use Kafka pull it in; the config is @ConditionalOnClass so others skip it. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

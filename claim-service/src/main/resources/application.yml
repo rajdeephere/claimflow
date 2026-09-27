@@ -17,6 +17,32 @@ spring:
         jdbc.time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all                       # wait for all in-sync replicas
+      properties:
+        enable.idempotence: true      # broker drops duplicates caused by producer retries
+        max.block.ms: 5000            # don't block the relay for 60 s if the broker is down
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    consumer:
+      group-id: claim-service
+      auto-offset-reset: earliest     # a new consumer group starts from the beginning, not "now"
+      enable-auto-commit: false       # Spring commits after the listener succeeds
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record                # commit each offset right after its record is processed
+
+claimflow:
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
+  kafka:
+    retry:
+      initial-interval-ms: 500
+      max-retries: 3
 
 management:
   endpoints:

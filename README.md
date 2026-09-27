@@ -38,6 +38,7 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 - [Architecture](docs/architecture.md): components, routes, ports
 - [System design](docs/system-design.md): requirements, flows, data model, events, failure handling
 - [Database design](docs/database-design.md) · [API design](docs/api-design.md)
+- [Kafka events](docs/kafka-events.md) · [Failure handling](docs/failure-handling.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - Phase notes: [docs/phases/](docs/phases/)
 
@@ -46,7 +47,7 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 - [x] [Phase 1 — Foundation](docs/phases/phase-01-foundation.md): multi-module Maven, common module, Docker Compose, Flyway
 - [x] [Phase 2 — Policy Service](docs/phases/phase-02-policy-service.md): customers, policies, coverages, coverage check
 - [x] [Phase 3 — Claim Service](docs/phases/phase-03-claim-service.md): FNOL, state machine, audit trail, adjusters
-- [ ] Phase 4 — Kafka events, idempotency, DLT
+- [x] [Phase 4 — Kafka](docs/phases/phase-04-kafka.md): transactional outbox, idempotent consumers, retry → DLT, correlation headers
 - [ ] Phase 5 — Validation rules
 - [ ] Phase 6 — Payment & settlement
 - [ ] Phase 7 — Optimistic locking, security, SQL optimisation

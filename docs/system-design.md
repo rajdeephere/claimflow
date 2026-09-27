@@ -158,7 +158,7 @@ sequenceDiagram
 The customer gets `201` immediately after FNOL. Validation, which depends on another service,
 happens asynchronously, so a slow or down Policy Service never blocks claim intake.
 
-### 6.2 Duplicate event (idempotent consumer) *(planned — Phase 4)*
+### 6.2 Duplicate event (idempotent consumer): implemented in Phase 4
 
 ```mermaid
 sequenceDiagram
@@ -265,7 +265,9 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Assign adjuster | `POST /api/v1/claims/{claimId}/assign-adjuster` |
 | Claim history | `GET /api/v1/claims/{claimId}/history` |
 
-## 9. Event design *(planned — Phase 4)*
+## 9. Event design: implemented in Phase 4
+
+> Full catalogue: [kafka-events.md](kafka-events.md). Failure modes: [failure-handling.md](failure-handling.md).
 
 | Topic | Key | Producer | Consumers |
 |---|---|---|---|
@@ -294,7 +296,8 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Poison message (always fails) | After N retries it goes to the DLT; the consumer moves on and the partition doesn't block. |
 | Concurrent claim update | `@Version` optimistic lock returns **409**; the client reloads and retries. |
 | Payment fails | Payment row kept as `FAILED`, retryable, visible for manual review; claim stays `PAYMENT_INITIATED`. |
-| DB commit succeeds but event publish fails (dual write) | See ADR-0012: transactional outbox considered; decision recorded in Phase 4. |
+| DB commit succeeds but event publish fails (dual write) | Transactional outbox (ADR-0012): the event is committed with the change and relayed later. Verified with Kafka stopped: FNOL 201, event published after Kafka restarted. |
+| Malformed or impossible event | Straight to `<topic>.DLT`, no retries; the partition keeps flowing. |
 
 ## 11. Security *(planned — Phase 7)*
 
