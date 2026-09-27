@@ -1,0 +1,34 @@
+server:
+  port: ${PORT:8000}   # 8080 is taken by a local Apache httpd
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 2000     # ms: fail fast if a service is down
+        response-timeout: 10s
+      default-filters:
+        # Gateway and downstream service both set X-Correlation-ID on the response; keep one.
+        - DedupeResponseHeader=X-Correlation-ID, RETAIN_FIRST
+      routes:
+        - id: policy-service
+          uri: ${POLICY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/policies/**, /api/v1/customers/**
+        - id: claim-service
+          uri: ${CLAIM_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/claims/**, /api/v1/adjusters/**
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/payments/**
+        # validation-service is internal (Kafka-driven): intentionally not exposed through the gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
