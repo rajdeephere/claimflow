@@ -19,7 +19,7 @@ Guidewire PolicyCenter / ClaimCenter / BillingCenter; a learning implementation 
 
 ```bash
 docker compose up -d          # Postgres (host port 5433), Kafka (9092), Kafka UI (http://localhost:8090)
-mvn clean package             # build all modules
+mvn clean install             # build + test all modules (integration tests need Docker)
 java -jar policy-service/target/policy-service-0.1.0-SNAPSHOT.jar
 java -jar api-gateway/target/api-gateway-0.1.0-SNAPSHOT.jar
 ```
@@ -37,13 +37,14 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 
 - [Architecture](docs/architecture.md): components, routes, ports
 - [System design](docs/system-design.md): requirements, flows, data model, events, failure handling
+- [Database design](docs/database-design.md) · [API design](docs/api-design.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - Phase notes: [docs/phases/](docs/phases/)
 
 ## Roadmap
 
 - [x] [Phase 1 — Foundation](docs/phases/phase-01-foundation.md): multi-module Maven, common module, Docker Compose, Flyway
-- [ ] Phase 2 — Policy Service
+- [x] [Phase 2 — Policy Service](docs/phases/phase-02-policy-service.md): customers, policies, coverages, coverage check
 - [ ] Phase 3 — Claim Service + state machine
 - [ ] Phase 4 — Kafka events, idempotency, DLT
 - [ ] Phase 5 — Validation rules

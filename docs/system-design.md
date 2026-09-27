@@ -91,7 +91,7 @@ flowchart LR
 | **API Gateway** | Single entry point: routing, correlation ID assignment, uniform 503/504, JWT validation *(Phase 7)* | stateless |
 | **Policy Service** | Customers, policies, coverages; answers "is policy X active and covering Y on date D?" | `policy_db` |
 | **Claim Service** | FNOL, lifecycle state machine, adjuster assignment, claim history — **owner of claim status** | `claim_db` |
-| **Validation Service** | Stateless rules engine triggered by `ClaimSubmitted` | none |
+| **Validation Service** | Stateless rules engine triggered by `ClaimSubmitted`; asks Policy Service `coverage-check` | none |
 | **Payment Service** | Settlement calculation, payment lifecycle, duplicate-payment prevention | `payment_db` |
 | **Notification consumer** | Listens to claim/payment events and logs simulated notifications | none |
 
@@ -175,6 +175,8 @@ even if two different events arrived.
 
 ## 7. Data design
 
+> Implemented schemas, constraints and indexes: [database-design.md](database-design.md). Full API detail: [api-design.md](api-design.md).
+
 Each service owns its database; no foreign keys cross service boundaries (IDs are just values).
 
 ```mermaid
@@ -186,14 +188,17 @@ erDiagram
     PAYMENT ||--|| SETTLEMENT : for
 
     CUSTOMER { uuid id PK
-               string name
-               string email }
+               string first_name
+               string last_name
+               string email UK }
     POLICY { uuid id PK
              string policy_number UK
              uuid customer_id FK
+             string product_type
              date start_date
              date end_date
-             string status }
+             numeric premium
+             string status "ACTIVE or CANCELLED" }
     COVERAGE { uuid id PK
                uuid policy_id FK
                string type
@@ -244,7 +249,11 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 
 | Operation | Endpoint |
 |---|---|
+| Create / get customer | `POST /api/v1/customers`, `GET /api/v1/customers/{customerId}` |
 | Create / get policy | `POST /api/v1/policies`, `GET /api/v1/policies/{policyId}` |
+| Customer's policies | `GET /api/v1/customers/{customerId}/policies` |
+| Cancel policy | `POST /api/v1/policies/{policyId}/cancel` |
+| Coverage check (for Validation) | `GET /api/v1/policies/{policyId}/coverage-check?coverageType=&incidentDate=` |
 | Submit / get claim | `POST /api/v1/claims`, `GET /api/v1/claims/{claimId}` |
 | Update claim status | `PATCH /api/v1/claims/{claimId}/status` |
 | Assign adjuster | `POST /api/v1/claims/{claimId}/assign-adjuster` |

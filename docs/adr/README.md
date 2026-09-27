@@ -19,5 +19,8 @@ To add one, copy [`template.md`](template.md).
 | [0011](0011-optimistic-locking-on-claims.md) | Optimistic locking on claims | Proposed | 7 |
 | [0012](0012-reliable-event-publishing.md) | Reliable event publishing (dual-write problem) | Proposed | 4 |
 | [0013](0013-jwt-authentication-at-gateway.md) | JWT authentication at the gateway, roles in services | Proposed | 7 |
+| [0014](0014-derive-policy-period-state-from-dates.md) | Derive policy period state from dates | Accepted | 2 |
+| [0015](0015-standard-mvc-errors-via-responseentityexceptionhandler.md) | Standard MVC errors via ResponseEntityExceptionHandler | Accepted | 2 |
+| [0016](0016-testcontainers-for-integration-tests.md) | Testcontainers (real PostgreSQL) for integration tests | Accepted | 2 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

@@ -4,72 +4,113 @@ import com.claimflow.common.correlation.CorrelationId;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Centralised exception -> HTTP mapping so controllers stay free of try/catch
  * and every service returns the same error shape.
+ *
+ * Extends {@link ResponseEntityExceptionHandler}, which already maps every standard Spring MVC
+ * exception to its correct status (400 bad parameter, 404 unknown route, 405 wrong method,
+ * 415 wrong content type, ...). We only change how the body is rendered, instead of re-implementing
+ * that mapping one exception at a time (see BUG-001 / BUG-006).
  */
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
-        List<ApiError.FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> new ApiError.FieldViolation(fe.getField(), fe.getDefaultMessage()))
-                .toList();
-        return build(HttpStatus.BAD_REQUEST, "Request validation failed", req, violations);
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex, HttpServletRequest req) {
-        return build(HttpStatus.BAD_REQUEST, "Malformed request body", req, List.of());
-    }
+    // ---- Our domain exceptions ----
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, List.of());
-    }
-
-    // Unknown URL. Without this, the catch-all below would turn a simple 404 into a 500.
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest req) {
-        return build(HttpStatus.NOT_FOUND, "No endpoint " + req.getMethod() + " " + req.getRequestURI(), req,
-                List.of());
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest req) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), req, List.of());
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException ex, HttpServletRequest req) {
-        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, List.of());
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req.getRequestURI(), List.of());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest req) {
         // Log the stack trace, but never leak internals to the client.
         log.error("Unhandled error on {} {}", req.getMethod(), req.getRequestURI(), ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, List.of());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req.getRequestURI(), List.of());
     }
 
-    private ResponseEntity<ApiError> build(HttpStatus status, String message, HttpServletRequest req,
+    // ---- Spring MVC exceptions: keep Spring's status, render our body ----
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+                                                                  HttpHeaders headers, HttpStatusCode status,
+                                                                  WebRequest request) {
+        List<ApiError.FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> new ApiError.FieldViolation(fe.getField(), fe.getDefaultMessage()))
+                .toList();
+        return toObject(build(status, "Request validation failed", path(request), violations));
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
+                                                        HttpStatusCode status, WebRequest request) {
+        String name = ex.getPropertyName() != null ? ex.getPropertyName() : "parameter";
+        String message = "Invalid value '" + ex.getValue() + "' for '" + name + "'";
+        Class<?> required = ex.getRequiredType();
+        if (required != null && required.isEnum()) {
+            message += "; allowed: " + Arrays.toString(required.getEnumConstants());
+        } else if (required != null) {
+            message += "; expected " + required.getSimpleName();
+        }
+        return toObject(build(status, message, path(request), List.of()));
+    }
+
+    /** Every other standard MVC exception ends up here with the right status already chosen. */
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
+                                                             HttpStatusCode status, WebRequest request) {
+        String message = body instanceof ProblemDetail pd && pd.getDetail() != null
+                ? pd.getDetail()
+                : ex.getMessage();
+        return toObject(build(status, message, path(request), List.of()));
+    }
+
+    // ---- helpers ----
+
+    private ResponseEntity<ApiError> build(HttpStatusCode status, String message, String path,
                                            List<ApiError.FieldViolation> violations) {
-        ApiError body = new ApiError(Instant.now(), status.value(), status.getReasonPhrase(), message,
-                req.getRequestURI(), CorrelationId.current(), violations);
+        String reason = status instanceof HttpStatus hs ? hs.getReasonPhrase() : String.valueOf(status.value());
+        ApiError body = new ApiError(Instant.now(), status.value(), reason, message, path,
+                CorrelationId.current(), violations);
         return ResponseEntity.status(status).body(body);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static ResponseEntity<Object> toObject(ResponseEntity<ApiError> response) {
+        return (ResponseEntity) response;
+    }
+
+    private static String path(WebRequest request) {
+        return request instanceof ServletWebRequest swr ? swr.getRequest().getRequestURI() : null;
     }
 }

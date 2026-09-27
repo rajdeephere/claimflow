@@ -1,7 +1,7 @@
 # Architecture
 
 > Living document, updated at the end of every phase.
-> Deeper reasoning: [System design](system-design.md) · [Architecture Decision Records](adr/README.md)
+> Deeper reasoning: [System design](system-design.md) · [Database design](database-design.md) · [API design](api-design.md) · [ADRs](adr/README.md)
 
 ## Overview
 
@@ -59,6 +59,9 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Flyway owns the schema, Hibernate validates | [0005](adr/0005-flyway-owns-schema.md) |
 | Spring Cloud Gateway as the single entry point | [0006](adr/0006-api-gateway-with-spring-cloud-gateway.md) |
 | Correlation ID from gateway to service to Kafka | [0007](adr/0007-correlation-id-propagation.md) |
+| Policy expiry derived from dates, not stored | [0014](adr/0014-derive-policy-period-state-from-dates.md) |
+| Standard MVC errors via `ResponseEntityExceptionHandler` | [0015](adr/0015-standard-mvc-errors-via-responseentityexceptionhandler.md) |
+| Testcontainers for integration tests | [0016](adr/0016-testcontainers-for-integration-tests.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -85,3 +88,4 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Phase | Architecture changes |
 |---|---|
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
+| 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
