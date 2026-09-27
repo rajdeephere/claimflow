@@ -93,7 +93,75 @@ collide. Gaps (from rolled-back transactions) are acceptable for a reference num
 
 ## claim_db (Claim Service): Phase 3
 
-*To be designed.*
+```mermaid
+erDiagram
+    adjusters ||--o{ claims : handles
+    claims ||--o{ claim_history : records
+
+    adjusters {
+        uuid id PK
+        varchar name
+        varchar email UK
+        boolean active
+        timestamptz created_at
+    }
+    claims {
+        uuid id PK
+        varchar claim_number UK "CLM-2026-000001"
+        uuid policy_id "no FK: policy_db"
+        varchar loss_type
+        date incident_date
+        timestamptz reported_at
+        varchar description
+        numeric claimed_amount "15,2"
+        numeric approved_amount "15,2, nullable"
+        varchar status "8 lifecycle states"
+        uuid adjuster_id FK
+        varchar rejection_reason
+        varchar idempotency_key UK
+        bigint version
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    claim_history {
+        bigserial id PK
+        uuid claim_id FK
+        varchar event_type
+        varchar old_status
+        varchar new_status
+        varchar performed_by
+        varchar correlation_id
+        varchar details
+        timestamptz created_at
+    }
+```
+
+### Constraints
+
+| Constraint | Rule |
+|---|---|
+| `uk_claims_claim_number` | claim numbers are unique |
+| `uk_claims_idempotency_key` | one claim per client idempotency key (NULLs allowed, many) |
+| `ck_claims_claimed_amount` | `claimed_amount > 0` |
+| `ck_claims_approved_amount` | `approved_amount` is NULL or `0 < approved_amount <= claimed_amount` |
+| `ck_claims_status` | one of the 8 lifecycle states |
+| `claims.adjuster_id → adjusters` | FK inside the same service is fine |
+| `claims.policy_id` | **no FK**: the policy is in another service's database |
+
+### Indexes
+
+| Index | Serves |
+|---|---|
+| `idx_claims_adjuster_id` | adjuster workload lookups |
+| `idx_claim_history_claim_created (claim_id, created_at, id)` | `GET /claims/{id}/history` in order |
+| *(Phase 7)* `idx_claim_policy_status_created (policy_id, status, created_at DESC)` | `GET /claims?policyId=&status=`, added with EXPLAIN ANALYZE before/after |
+
+### Audit trail
+
+`claim_history` is append-only (`@Immutable`, columns `updatable = false`) and written in the same
+transaction as the claim change ([ADR-0018](adr/0018-append-only-claim-history.md)).
+
+---
 
 ## payment_db (Payment Service): Phase 6
 

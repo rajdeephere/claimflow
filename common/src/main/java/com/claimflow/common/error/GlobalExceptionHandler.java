@@ -12,12 +12,16 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -68,6 +72,33 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         List<ApiError.FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()
                 .map(fe -> new ApiError.FieldViolation(fe.getField(), fe.getDefaultMessage()))
                 .toList();
+        return toObject(build(status, "Request validation failed", path(request), violations));
+    }
+
+    /**
+     * Spring 6.1+: once a controller method has constraints directly on its parameters (e.g. @Size on a
+     * header, @Max on a query param), Spring validates ALL its parameters as a method call, including
+     * the @Valid @RequestBody, and throws this exception instead of MethodArgumentNotValidException.
+     * Without this override the status is still 400 but the field violations are silently lost (BUG-007).
+     */
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+                                                                            HttpHeaders headers,
+                                                                            HttpStatusCode status,
+                                                                            WebRequest request) {
+        List<ApiError.FieldViolation> violations = new ArrayList<>();
+        for (ParameterValidationResult result : ex.getAllValidationResults()) {
+            if (result instanceof ParameterErrors errors) {
+                // an object argument such as the request body: report its fields
+                errors.getFieldErrors().forEach(fe ->
+                        violations.add(new ApiError.FieldViolation(fe.getField(), fe.getDefaultMessage())));
+            } else {
+                // a simple argument (header, query param, path variable): report the parameter itself
+                String name = result.getMethodParameter().getParameterName();
+                result.getResolvableErrors().forEach(err ->
+                        violations.add(new ApiError.FieldViolation(name, err.getDefaultMessage())));
+            }
+        }
         return toObject(build(status, "Request validation failed", path(request), violations));
     }
 

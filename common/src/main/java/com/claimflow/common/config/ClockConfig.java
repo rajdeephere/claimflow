@@ -1,4 +1,4 @@
-package com.claimflow.policy.config;
+package com.claimflow.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

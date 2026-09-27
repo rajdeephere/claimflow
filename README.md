@@ -45,7 +45,7 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 
 - [x] [Phase 1 — Foundation](docs/phases/phase-01-foundation.md): multi-module Maven, common module, Docker Compose, Flyway
 - [x] [Phase 2 — Policy Service](docs/phases/phase-02-policy-service.md): customers, policies, coverages, coverage check
-- [ ] Phase 3 — Claim Service + state machine
+- [x] [Phase 3 — Claim Service](docs/phases/phase-03-claim-service.md): FNOL, state machine, audit trail, adjusters
 - [ ] Phase 4 — Kafka events, idempotency, DLT
 - [ ] Phase 5 — Validation rules
 - [ ] Phase 6 — Payment & settlement

@@ -91,4 +91,47 @@ GET /api/v1/policies/{policyId}/coverage-check?coverageType=COLLISION&incidentDa
 
 ## Claim Service: Phase 3
 
+### File a claim (FNOL)
+```http
+POST /api/v1/claims
+Content-Type: application/json
+Idempotency-Key: 5b1e0c3a-8d2f-4a8e-9c0b-1f2e3d4c5b6a
+X-User-Id: agent-7
+
+{ "policyId": "d2653a42-...", "lossType": "COLLISION", "incidentDate": "2026-03-10",
+  "description": "Rear-ended at a signal", "claimedAmount": 200000.00 }
+```
+`201 Created` for a new claim; **`200 OK` with the same claim** when the key was seen before.
+```json
+{ "id": "...", "claimNumber": "CLM-2026-000001", "status": "SUBMITTED",
+  "allowedNextStatuses": ["UNDER_REVIEW", "REJECTED"], "adjusterId": null, "version": 0, ... }
+```
+
+### Change status
+```http
+PATCH /api/v1/claims/{claimId}/status
+{ "targetStatus": "APPROVED", "approvedAmount": 180000.00 }
+{ "targetStatus": "REJECTED", "reason": "Damage pre-dates policy" }
+{ "targetStatus": "CLOSED" }
+```
+| Situation | Status |
+|---|---|
+| Transition not in the lifecycle (e.g. CLOSED → APPROVED) | 409 with the allowed targets |
+| Target is system-only (UNDER_REVIEW, SETTLED, ...) | 422 |
+| Approve without an adjuster, or amount > claimed | 422 |
+| Reject without a reason | 422 |
+
+### Other endpoints
+| Method | Path |
+|---|---|
+| GET | `/api/v1/claims/{claimId}` |
+| GET | `/api/v1/claims?policyId=&status=&page=0&size=20` → `{content, page, size, totalElements, totalPages}`, newest first, size ≤ 100 |
+| POST | `/api/v1/claims/{claimId}/assign-adjuster` `{ "adjusterId": "..." }` |
+| GET | `/api/v1/claims/{claimId}/history` → `[{eventType, oldStatus, newStatus, performedBy, correlationId, details, timestamp}]` |
+| POST / GET | `/api/v1/adjusters` |
+
+---
+
+## Payment Service: Phase 6
+
 *To be designed.*

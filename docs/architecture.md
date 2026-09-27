@@ -62,6 +62,9 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Policy expiry derived from dates, not stored | [0014](adr/0014-derive-policy-period-state-from-dates.md) |
 | Standard MVC errors via `ResponseEntityExceptionHandler` | [0015](adr/0015-standard-mvc-errors-via-responseentityexceptionhandler.md) |
 | Testcontainers for integration tests | [0016](adr/0016-testcontainers-for-integration-tests.md) |
+| Claim lifecycle as an enum transition table with USER/SYSTEM triggers | [0008](adr/0008-claim-state-machine-as-domain-enum.md) |
+| Idempotent FNOL (`Idempotency-Key`) | [0017](adr/0017-idempotent-fnol-with-idempotency-key.md) |
+| Append-only claim history, same transaction | [0018](adr/0018-append-only-claim-history.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -89,3 +92,4 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 |---|---|
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
 | 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
+| 3 | Claim Service implemented (`claim_db`, state machine, audit trail, idempotent FNOL, adjusters); `common` gains `ClockConfig`, `PageResponse`, method-validation errors |

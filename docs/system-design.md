@@ -114,7 +114,11 @@ stateDiagram-v2
 
 The Claim Service is the **single writer** of claim status. Other services never change it directly;
 they publish events and the Claim Service applies the transition if the state machine allows it.
-Invalid transitions → `409 Conflict` over REST, or are logged and skipped for events.
+Every transition is marked **USER** (adjuster/manager via REST: approve, reject after review, close)
+or **SYSTEM** (driven by events: validation outcome, settlement and payment steps). Invalid
+transitions return `409 Conflict`; a user requesting a SYSTEM transition returns `422`. Implemented in
+Phase 3 ([ADR-0008](adr/0008-claim-state-machine-as-domain-enum.md)); full table in
+[phase-03-claim-service.md](phases/phase-03-claim-service.md).
 
 ## 6. Key flows
 
@@ -254,7 +258,9 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Customer's policies | `GET /api/v1/customers/{customerId}/policies` |
 | Cancel policy | `POST /api/v1/policies/{policyId}/cancel` |
 | Coverage check (for Validation) | `GET /api/v1/policies/{policyId}/coverage-check?coverageType=&incidentDate=` |
-| Submit / get claim | `POST /api/v1/claims`, `GET /api/v1/claims/{claimId}` |
+| Submit / get claim | `POST /api/v1/claims` (+ `Idempotency-Key`), `GET /api/v1/claims/{claimId}` |
+| Claims of a policy | `GET /api/v1/claims?policyId=&status=&page=&size=` |
+| Adjusters | `POST /api/v1/adjusters`, `GET /api/v1/adjusters` |
 | Update claim status | `PATCH /api/v1/claims/{claimId}/status` |
 | Assign adjuster | `POST /api/v1/claims/{claimId}/assign-adjuster` |
 | Claim history | `GET /api/v1/claims/{claimId}/history` |
@@ -281,6 +287,8 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 |---|---|
 | Downstream service down (sync call via gateway) | Gateway returns **503** in the standard error format; client may retry. |
 | Downstream too slow | Gateway returns **504** after the 10 s response timeout. |
+| Client retries FNOL after a timeout | Same `Idempotency-Key` returns the original claim (200); concurrent retries resolve to one claim via a unique constraint (ADR-0017). |
+| Policy Service down during FNOL | FNOL is still accepted (`SUBMITTED`); the policy is checked asynchronously. |
 | Policy Service down during validation | Consumer retries with backoff; the event stays in Kafka; the claim waits in `SUBMITTED`. |
 | Consumer crashes mid-processing | Offset not committed, so the event is redelivered and the idempotency check prevents double effects. |
 | Poison message (always fails) | After N retries it goes to the DLT; the consumer moves on and the partition doesn't block. |
