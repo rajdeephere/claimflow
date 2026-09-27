@@ -164,7 +164,7 @@ class ClaimKafkaIntegrationTest extends AbstractIntegrationTest {
         UUID claimId = fileFnol("corr-dup");
         UUID eventId = UUID.randomUUID();
         ClaimEvents.ClaimValidated payload = new ClaimEvents.ClaimValidated(claimId, new BigDecimal("500000"),
-                new BigDecimal("20000"));
+                new BigDecimal("20000"), List.of());
 
         sendWithId(Topics.VALIDATION_EVENTS, EventTypes.CLAIM_VALIDATED, claimId, payload, "corr-dup", eventId);
         await().atMost(TIMEOUT).until(() -> status(claimId).equals("UNDER_REVIEW"));
@@ -226,7 +226,7 @@ class ClaimKafkaIntegrationTest extends AbstractIntegrationTest {
 
         // the poison message didn't block the partition: a valid event for the same claim still gets processed
         send(Topics.VALIDATION_EVENTS, EventTypes.CLAIM_VALIDATED, claimId,
-                new ClaimEvents.ClaimValidated(claimId, BigDecimal.TEN, BigDecimal.ONE), "corr-poison");
+                new ClaimEvents.ClaimValidated(claimId, BigDecimal.TEN, BigDecimal.ONE, List.of()), "corr-poison");
         await().atMost(TIMEOUT).until(() -> status(claimId).equals("UNDER_REVIEW"));
     }
 
@@ -234,7 +234,7 @@ class ClaimKafkaIntegrationTest extends AbstractIntegrationTest {
     void fullEventDrivenLifecycleToSettled() throws Exception {
         UUID claimId = fileFnol("corr-full");
         send(Topics.VALIDATION_EVENTS, EventTypes.CLAIM_VALIDATED, claimId,
-                new ClaimEvents.ClaimValidated(claimId, new BigDecimal("500000"), new BigDecimal("20000")), "corr-full");
+                new ClaimEvents.ClaimValidated(claimId, new BigDecimal("500000"), new BigDecimal("20000"), List.of()), "corr-full");
         await().atMost(TIMEOUT).until(() -> status(claimId).equals("UNDER_REVIEW"));
 
         // adjuster approves over REST -> ClaimApproved is published for Payment

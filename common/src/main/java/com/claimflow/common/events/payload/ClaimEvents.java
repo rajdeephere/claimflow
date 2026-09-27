@@ -32,7 +32,15 @@ public final class ClaimEvents {
 
     // ---- validation.events (producer: validation-service) ----
 
-    public record ClaimValidated(UUID claimId, BigDecimal coverageLimit, BigDecimal deductible) {
+    /**
+     * {@code warnings} was added in Phase 5 as an optional field (non-breaking, ADR-0019):
+     * events produced before it simply have none.
+     */
+    public record ClaimValidated(UUID claimId, BigDecimal coverageLimit, BigDecimal deductible,
+                                 List<String> warnings) {
+        public ClaimValidated {
+            warnings = warnings == null ? List.of() : List.copyOf(warnings);
+        }
     }
 
     public record ClaimValidationFailed(UUID claimId, List<String> reasons) {

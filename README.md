@@ -48,7 +48,7 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 - [x] [Phase 2 — Policy Service](docs/phases/phase-02-policy-service.md): customers, policies, coverages, coverage check
 - [x] [Phase 3 — Claim Service](docs/phases/phase-03-claim-service.md): FNOL, state machine, audit trail, adjusters
 - [x] [Phase 4 — Kafka](docs/phases/phase-04-kafka.md): transactional outbox, idempotent consumers, retry → DLT, correlation headers
-- [ ] Phase 5 — Validation rules
+- [x] [Phase 5 — Validation Service](docs/phases/phase-05-validation-service.md): rules engine, policy coverage check, outage-tolerant retries
 - [ ] Phase 6 — Payment & settlement
 - [ ] Phase 7 — Optimistic locking, security, SQL optimisation
 - [ ] Phase 8 — Tests (JUnit, Mockito, Testcontainers) & GitHub Actions CI

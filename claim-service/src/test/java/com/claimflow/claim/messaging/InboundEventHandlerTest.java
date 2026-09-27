@@ -1,6 +1,9 @@
 package com.claimflow.claim.messaging;
 
+import com.claimflow.claim.claim.Claim;
 import com.claimflow.claim.claim.ClaimService;
+import com.claimflow.claim.claim.LossType;
+import com.claimflow.claim.claim.TransitionSource;
 import com.claimflow.claim.claim.ClaimStatus;
 import com.claimflow.common.config.JsonConfig;
 import com.claimflow.common.events.EventEnvelope;
@@ -24,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -45,6 +49,17 @@ class InboundEventHandlerTest {
         return new InboundEventHandler(processed, claims, mapper, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
+    /** A claim in the given status, registered with the mocked ClaimService. */
+    private UUID claimIn(ClaimStatus status) {
+        Claim claim = new Claim("CLM-2026-000001", UUID.randomUUID(), LossType.COLLISION,
+                java.time.LocalDate.of(2026, 3, 10), NOW, "x", new BigDecimal("1000"), null);
+        if (status == ClaimStatus.UNDER_REVIEW) {
+            claim.transitionTo(ClaimStatus.UNDER_REVIEW, TransitionSource.SYSTEM, "validated earlier");
+        }
+        when(claims.get(claim.getId())).thenReturn(claim);
+        return claim.getId();
+    }
+
     private EventEnvelope envelope(String type, UUID claimId, Object payload) {
         return new EventEnvelope(UUID.randomUUID(), type, 1, NOW, "test", claimId, "corr-1",
                 mapper.valueToTree(payload));
@@ -52,9 +67,9 @@ class InboundEventHandlerTest {
 
     @Test
     void validatedMovesClaimToUnderReview() throws Exception {
-        UUID claimId = UUID.randomUUID();
+        UUID claimId = claimIn(ClaimStatus.SUBMITTED);
         EventEnvelope event = envelope(EventTypes.CLAIM_VALIDATED, claimId,
-                new ClaimEvents.ClaimValidated(claimId, new BigDecimal("500000"), new BigDecimal("20000")));
+                new ClaimEvents.ClaimValidated(claimId, new BigDecimal("500000"), new BigDecimal("20000"), List.of()));
         when(processed.markProcessed(event.eventId(), InboundEventHandler.CONSUMER, event.eventType(), NOW))
                 .thenReturn(true);
 
@@ -65,8 +80,37 @@ class InboundEventHandlerTest {
     }
 
     @Test
+    void validationWarningsAreRecordedInHistoryDetails() throws Exception {
+        UUID claimId = claimIn(ClaimStatus.SUBMITTED);
+        EventEnvelope event = envelope(EventTypes.CLAIM_VALIDATED, claimId,
+                new ClaimEvents.ClaimValidated(claimId, new BigDecimal("100000"), new BigDecimal("5000"),
+                        List.of("Claimed amount exceeds coverage limit; payout will be capped")));
+        when(processed.markProcessed(any(), anyString(), anyString(), any())).thenReturn(true);
+
+        handler().handle(event);
+
+        verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.UNDER_REVIEW),
+                eq("Validated: coverage limit 100000, deductible 5000; warnings: "
+                        + "Claimed amount exceeds coverage limit; payout will be capped"));
+    }
+
+    @Test
+    void eventWithoutWarningsFieldStillParses() throws Exception {
+        // an event produced before 'warnings' existed (contract evolution, ADR-0019)
+        UUID claimId = claimIn(ClaimStatus.SUBMITTED);
+        EventEnvelope event = new EventEnvelope(UUID.randomUUID(), EventTypes.CLAIM_VALIDATED, 1, NOW, "old",
+                claimId, "c", mapper.readTree("{\"claimId\":\"" + claimId + "\",\"coverageLimit\":10,\"deductible\":1}"));
+        when(processed.markProcessed(any(), anyString(), anyString(), any())).thenReturn(true);
+
+        handler().handle(event);
+
+        verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.UNDER_REVIEW),
+                eq("Validated: coverage limit 10, deductible 1"));
+    }
+
+    @Test
     void validationFailureRejectsWithAllReasons() throws Exception {
-        UUID claimId = UUID.randomUUID();
+        UUID claimId = claimIn(ClaimStatus.SUBMITTED);
         EventEnvelope event = envelope(EventTypes.CLAIM_VALIDATION_FAILED, claimId,
                 new ClaimEvents.ClaimValidationFailed(claimId, List.of("Policy cancelled", "Coverage missing")));
         when(processed.markProcessed(any(), anyString(), anyString(), any())).thenReturn(true);
@@ -75,6 +119,18 @@ class InboundEventHandlerTest {
 
         verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.REJECTED),
                 eq("Validation failed: Policy cancelled; Coverage missing"));
+    }
+
+    @Test
+    void staleValidationResultForClaimAlreadyUnderReviewIsIgnoredNotFailed() throws Exception {
+        UUID claimId = claimIn(ClaimStatus.UNDER_REVIEW);
+        EventEnvelope event = envelope(EventTypes.CLAIM_VALIDATED, claimId,
+                new ClaimEvents.ClaimValidated(claimId, BigDecimal.TEN, BigDecimal.ONE, List.of()));
+        when(processed.markProcessed(any(), anyString(), anyString(), any())).thenReturn(true);
+
+        handler().handle(event);   // no exception -> no DLT
+
+        verify(claims, never()).applySystemTransition(any(), any(), any());
     }
 
     @Test

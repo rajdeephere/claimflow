@@ -29,6 +29,17 @@
 | Consumer instance killed | partitions reassigned after the session timeout (~45 s); uncommitted records redelivered, then deduped | observed manually |
 | Payment failed | `PaymentFailed` recorded in claim history; claim stays PAYMENT_INITIATED for retry or manual review | unit test |
 
+## Validation Service (Phase 5)
+
+| Failure | Behaviour | Verified |
+|---|---|---|
+| **Policy Service down / 5xx / timeout** | `DependencyUnavailableException`: backoff 1 s → 30 s cap for up to 10 min; claim waits in SUBMITTED; then validated | integration (4 × 503 then OK) + **live** (service stopped and restarted) |
+| Policy Service 404 "Policy not found" | business answer: `ClaimValidationFailed` | integration + live |
+| 404 without "Policy not found" (misrouted URL) | treated as unavailable, **never** as a rejection | `PolicyClientTest` |
+| Our request rejected (other 4xx) | our bug: DLT immediately | `PolicyClientTest` |
+| Same `ClaimSubmitted` delivered twice | same output eventId, deduped downstream | integration |
+| Result arrives after the claim moved on (replay, re-validation) | claim-service logs "Stale … ignoring" and acknowledges; no DLT | unit test (the live replay found BUG-011; the fix was verified by the unit test, not re-run live) |
+
 ## Dead Letter Topics
 
 - Name: `<original-topic>.DLT`, same partition as the original.
@@ -41,5 +52,4 @@
 ## Not yet handled (future phases)
 
 - Concurrent REST update on the same claim: optimistic lock → 409 mapping (Phase 7).
-- Circuit breaker around synchronous calls from Validation to Policy (Phase 5).
 - DLT alerting and a replay endpoint.

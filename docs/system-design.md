@@ -291,7 +291,8 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Downstream too slow | Gateway returns **504** after the 10 s response timeout. |
 | Client retries FNOL after a timeout | Same `Idempotency-Key` returns the original claim (200); concurrent retries resolve to one claim via a unique constraint (ADR-0017). |
 | Policy Service down during FNOL | FNOL is still accepted (`SUBMITTED`); the policy is checked asynchronously. |
-| Policy Service down during validation | Consumer retries with backoff; the event stays in Kafka; the claim waits in `SUBMITTED`. |
+| Policy Service down during validation | Consumer retries with a long backoff (1 s → 30 s, up to 10 min); the claim waits in `SUBMITTED`. Verified live: stopped Policy Service, filed FNOL, restarted, claim validated automatically (ADR-0022). |
+| Duplicate or late validation result | Same input gives the same output eventId (ADR-0021), deduped; results for claims no longer SUBMITTED are ignored. |
 | Consumer crashes mid-processing | Offset not committed, so the event is redelivered and the idempotency check prevents double effects. |
 | Poison message (always fails) | After N retries it goes to the DLT; the consumer moves on and the partition doesn't block. |
 | Concurrent claim update | `@Version` optimistic lock returns **409**; the client reloads and retries. |

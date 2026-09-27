@@ -69,6 +69,8 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Idempotent consumers (`processed_events`, ON CONFLICT) | [0009](adr/0009-idempotent-consumers-processed-events.md) |
 | JSON envelope, String serde, no type headers | [0019](adr/0019-json-event-envelope.md) |
 | Exact-decimal JSON | [0020](adr/0020-exact-decimal-json.md) |
+| Deterministic event IDs (stateless idempotency) | [0021](adr/0021-deterministic-event-ids-for-stateless-idempotency.md) |
+| Consumer failure classes: retry / long retry / DLT / ignore | [0022](adr/0022-classifying-consumer-failures.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -97,4 +99,5 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
 | 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
 | 3 | Claim Service implemented (`claim_db`, state machine, audit trail, idempotent FNOL, adjusters); `common` gains `ClockConfig`, `PageResponse`, method-validation errors |
+| 5 | Validation Service implemented: consumes `ClaimSubmitted`, REST coverage-check to Policy Service, 5 pluggable rules, publishes validation results with deterministic IDs; dependency outages retried for minutes |
 | 4 | Claim Service is event-driven: transactional outbox → `claim.events`; idempotent consumer of `validation.events` / `payment.events`; retry → DLT; correlation ID in Kafka headers; `common` gains the event contract, Kafka setup and money-safe JSON |

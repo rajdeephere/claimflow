@@ -26,5 +26,7 @@ To add one, copy [`template.md`](template.md).
 | [0018](0018-append-only-claim-history.md) | Append-only claim history in the same transaction | Accepted | 3 |
 | [0019](0019-json-event-envelope.md) | JSON event envelope with String serialisation | Accepted | 4 |
 | [0020](0020-exact-decimal-json.md) | Exact-decimal JSON settings (extends 0010) | Accepted | 4 |
+| [0021](0021-deterministic-event-ids-for-stateless-idempotency.md) | Deterministic event IDs for stateless idempotency | Accepted | 5 |
+| [0022](0022-classifying-consumer-failures.md) | Classifying consumer failures: retry, long retry, DLT, ignore | Accepted | 5 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

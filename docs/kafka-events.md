@@ -6,8 +6,8 @@
 
 | Topic | Producer | Consumers (group) | Key | Partitions |
 |---|---|---|---|---|
-| `claim.events` | claim-service (via outbox) | validation-service, payment-service, notifications *(Phases 5–6)* | claimId | 3 |
-| `validation.events` | validation-service *(Phase 5)* | claim-service (`claim-service`) | claimId | 3 |
+| `claim.events` | claim-service (via outbox) | validation-service (`validation-service`, uses `ClaimSubmitted`), payment-service *(Phase 6)* | claimId | 3 |
+| `validation.events` | validation-service | claim-service (`claim-service`) | claimId | 3 |
 | `payment.events` | payment-service *(Phase 6)* | claim-service (`claim-service`) | claimId | 3 |
 | `<topic>.DLT` | Spring Kafka `DeadLetterPublishingRecoverer` | humans / replay tooling | original key | 3 |
 
@@ -55,8 +55,11 @@ Amounts are plain decimals with their scale preserved (`200000.00`, never `2E+5`
 
 | Event | Effect in claim-service | Payload |
 |---|---|---|
-| `ClaimValidated` | SUBMITTED → UNDER_REVIEW | `claimId, coverageLimit, deductible` |
-| `ClaimValidationFailed` | SUBMITTED → REJECTED (+ `ClaimRejected` published) | `claimId, reasons[]` |
+| `ClaimValidated` | SUBMITTED → UNDER_REVIEW | `claimId, coverageLimit, deductible, warnings[]` (`warnings` added in Phase 5, optional) |
+| `ClaimValidationFailed` | SUBMITTED → REJECTED (+ `ClaimRejected` published) | `claimId, reasons[]` (all failed rules) |
+
+Validation result `eventId`s are **derived** from the `ClaimSubmitted` eventId (ADR-0021). A result for
+a claim that is no longer SUBMITTED is ignored as stale (ADR-0022).
 
 ### payment.events (producer: payment-service)
 

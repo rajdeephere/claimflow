@@ -56,11 +56,18 @@ public class InboundEventHandler {
         switch (event.eventType()) {
             case EventTypes.CLAIM_VALIDATED -> {
                 ClaimValidated p = mapper.treeToValue(event.payload(), ClaimValidated.class);
-                claims.applySystemTransition(p.claimId(), ClaimStatus.UNDER_REVIEW,
-                        "Validated: coverage limit " + p.coverageLimit() + ", deductible " + p.deductible());
+                if (isStaleValidation(p.claimId(), event)) {
+                    return;
+                }
+                String details = "Validated: coverage limit " + p.coverageLimit() + ", deductible " + p.deductible()
+                        + (p.warnings().isEmpty() ? "" : "; warnings: " + String.join("; ", p.warnings()));
+                claims.applySystemTransition(p.claimId(), ClaimStatus.UNDER_REVIEW, details);
             }
             case EventTypes.CLAIM_VALIDATION_FAILED -> {
                 ClaimValidationFailed p = mapper.treeToValue(event.payload(), ClaimValidationFailed.class);
+                if (isStaleValidation(p.claimId(), event)) {
+                    return;
+                }
                 claims.applySystemTransition(p.claimId(), ClaimStatus.REJECTED,
                         "Validation failed: " + String.join("; ", p.reasons()));
             }
@@ -81,5 +88,21 @@ public class InboundEventHandler {
             // Tolerant reader: a producer may add new event types before we understand them.
             default -> log.info("Ignoring event type {} ({})", event.eventType(), event.eventId());
         }
+    }
+
+    /**
+     * A validation result is only meaningful while the claim is SUBMITTED. If the claim has already
+     * moved on, this is a late duplicate (replay, re-validation): a normal at-least-once situation,
+     * so acknowledge and ignore it. Dead-lettering it would bury real problems among harmless noise.
+     * Payment events in the wrong state are NOT treated like this: those are genuine anomalies (DLT).
+     */
+    private boolean isStaleValidation(java.util.UUID claimId, EventEnvelope event) {
+        ClaimStatus current = claims.get(claimId).getStatus();
+        if (current != ClaimStatus.SUBMITTED) {
+            log.warn("Stale {} {} for claim {}: claim is already {}; ignoring", event.eventType(),
+                    event.eventId(), claimId, current);
+            return true;
+        }
+        return false;
     }
 }
