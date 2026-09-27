@@ -16,6 +16,7 @@ Docker build → Image**, plus a one-command way to run the whole platform local
 | One multi-stage Dockerfile for all services (`--build-arg MODULE=...`), layered jar, JRE Alpine, non-root, container-aware heap | `Dockerfile`, `.dockerignore` |
 | `docker compose --profile apps up`: 5 services + infra, healthchecks, `depends_on: service_healthy`, only the gateway published | `docker-compose.yml` |
 | GitHub Actions: build + unit → integration + coverage → test summary → artifacts → Docker image matrix (after tests pass) | `.github/workflows/ci.yml` |
+| **Postman collection** (62 requests, 8 folders: every API, a self-contained journey, every error status) + Newman **API-test job** in CI | `postman/`, `ci.yml` (`api-tests`) |
 
 ## Pipeline
 
@@ -25,6 +26,7 @@ flowchart LR
     build --> it[Integration tests + coverage<br/>mvn verify -Dskip.unit=true<br/>35 tests, Testcontainers]
     it --> summary[Job summary + artifacts<br/>test counts, JaCoCo, failed reports]
     it --> images[Docker images x5<br/>matrix, GHA layer cache]
+    it --> api[API tests<br/>compose up + Newman<br/>Postman collection]
 ```
 
 ## Image design
@@ -45,7 +47,7 @@ Image sizes: 221–260 MB (JRE ≈ 170 MB of that).
 
 | Check | Result |
 |---|---|
-| `mvn test` | ✅ 185 unit tests, 46 s, no Docker |
+| `mvn test` | ✅ 185 unit tests, 46 s, no Docker (188 after BUG-017's tests) |
 | `mvn verify -Dskip.unit=true` | ✅ unit tests skipped, 35 integration tests run |
 | Coverage (unit + integration merged) | policy 95 %, claim 93 %, validation 97 %, payment 91 % of instructions. `common` shows 11 % because its code is exercised by the *services'* tests; a cross-module aggregate report would credit it |
 | All 5 images build; run as `uid=100(claimflow)` | ✅ |
@@ -53,6 +55,8 @@ Image sizes: 221–260 MB (JRE ≈ 170 MB of that).
 | **Full journey in containers:** new customer → HOME/FIRE policy → FNOL → auto-validated → approved 3,00,000 → paid **2,75,000.00** (25,000 deductible) | ✅ |
 | Correlation ID `docker-journey` in gateway, claim and validation container logs | ✅ |
 | Workflow YAML parses; the job-summary script run locally gives the right counts (5 / 30+4 / 110+17 / 26+7 / 14+7) | ✅ |
+| **Postman collection with Newman against the Docker stack** | ✅ 67 requests, **155 assertions, 0 failures** |
+| `mvn package -DskipTests` runs no tests; `-Dskip.unit=true` runs only integration tests; `mvn test` only unit tests | ✅ (after BUG-018) |
 | **GitHub Actions run itself** | ⏳ happens on the first push (can't be executed locally) |
 
 ## Issues found & fixed
@@ -64,6 +68,16 @@ Image sizes: 221–260 MB (JRE ≈ 170 MB of that).
   `surefire-reports`, which still held XML from before the unit/integration split, so the counts
   were too high (34 vs 30 for policy). CI always starts from a clean checkout, but I verified with
   cleaned report folders before trusting the script.
+
+- **BUG-017 (found with the Postman collection): money came back in the client's scale.** A policy
+  created with `"limitAmount": 500000.0` returned `500000.0`; the next GET returned `500000.00` (read from
+  `NUMERIC(15,2)`), and events carried the client's scale to other services. Amounts are now normalised
+  with `Money.of(...)` (scale 2, never silently rounded) in every entity constructor; regression test added.
+- **BUG-018 (introduced by this phase): `-DskipTests` stopped skipping unit tests.** The `skip.unit`
+  switch was wired to Surefire's `skipTests` parameter; an explicit plugin setting overrides the
+  command-line property, so `mvn package -DskipTests`, including inside `docker build`, ran every unit
+  test (and a timing-sensitive one failed on a cold container JVM). Now wired to Surefire's separate `skip`
+  parameter; all three modes verified.
 
 ## Decisions
 

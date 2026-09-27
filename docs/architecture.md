@@ -78,6 +78,7 @@ Downstream unreachable → **503**, too slow (> 10 s) → **504**, both in the s
 | Composite index `(policy_id, status, created_at DESC)` | [0027](adr/0027-composite-index-claims-policy-status-created.md) |
 | Layered non-root images from one Dockerfile | [0028](adr/0028-container-images.md) |
 | CI: unit → integration → coverage → images | [0029](adr/0029-ci-pipeline.md) |
+| URI versioning + committed, build-checked OpenAPI contracts; one Swagger UI at the gateway | [0030](adr/0030-api-versioning-and-openapi-contracts.md) |
 | BigDecimal for money | [0010](adr/0010-bigdecimal-for-money.md) |
 
 ## Cross-cutting concerns
@@ -109,6 +110,7 @@ network by name (`policy-service:8081`, `postgres:5432`, `kafka:29092`).
 | 1 | Module layout, database per service, Kafka/Postgres infra, common error handling and correlation ID, API gateway |
 | 2 | Policy Service implemented (`policy_db` schema, 7 endpoints incl. `coverage-check`); `common` error handler rebuilt on `ResponseEntityExceptionHandler` |
 | 3 | Claim Service implemented (`claim_db`, state machine, audit trail, idempotent FNOL, adjusters); `common` gains `ClockConfig`, `PageResponse`, method-validation errors |
+| API docs | Versioned OpenAPI `v1` for every service (shared config in `common`), contracts in `docs/openapi/` checked by integration tests, aggregated Swagger UI at the gateway (`/swagger-ui.html`) |
 | 8 | Containerised: one layered non-root Dockerfile, `docker compose --profile apps` runs all 5 services; GitHub Actions pipeline (unit → integration → coverage → images) |
 | 7 | Lost-update protection: `@Version` → 409, ETag/If-Match → 412; composite index for the claims work-queue query, benchmarked with EXPLAIN ANALYZE on 500k rows and guarded by a plan test |
 | 6 | Payment Service implemented: consumes `ClaimApproved`, BigDecimal settlement, idempotent payment via simulated gateway, publishes `PaymentInitiated`/`Completed`/`Failed` via outbox. **Full lifecycle runs end to end.** Claim Service stores coverage terms and forwards them in `ClaimApproved` |

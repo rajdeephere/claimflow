@@ -2,6 +2,7 @@ package com.claimflow.policy.policy;
 
 import com.claimflow.common.error.BusinessRuleException;
 import com.claimflow.common.error.ConflictException;
+import com.claimflow.common.money.Money;
 import com.claimflow.policy.customer.Customer;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -92,7 +93,7 @@ public class Policy {
         this.status = PolicyStatus.ACTIVE;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.premium = premium;
+        this.premium = Money.of(premium);   // scale 2 from the start (BUG-017)
     }
 
     public void addCoverage(CoverageType type, BigDecimal limitAmount, BigDecimal deductible) {

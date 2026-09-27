@@ -2,6 +2,7 @@ package com.claimflow.claim.claim;
 
 import com.claimflow.common.error.BusinessRuleException;
 import com.claimflow.common.error.ConflictException;
+import com.claimflow.common.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -103,7 +104,7 @@ public class Claim {
         this.incidentDate = incidentDate;
         this.reportedAt = reportedAt;
         this.description = description;
-        this.claimedAmount = claimedAmount;
+        this.claimedAmount = Money.of(claimedAmount);   // scale 2 from the start (BUG-017)
         this.idempotencyKey = idempotencyKey;
         this.status = ClaimStatus.SUBMITTED;
     }
@@ -145,7 +146,7 @@ public class Claim {
             throw new BusinessRuleException("Approved amount " + amount + " does not exceed the deductible "
                     + deductible + ": nothing would be payable; reject the claim instead");
         }
-        approvedAmount = amount;
+        approvedAmount = Money.of(amount);
         return transitionTo(ClaimStatus.APPROVED, TransitionSource.USER, "Approved amount " + amount);
     }
 
@@ -166,8 +167,8 @@ public class Claim {
     /** Validation passed: remember the coverage terms it confirmed, then move to UNDER_REVIEW. */
     public StatusChange markValidated(BigDecimal coverageLimit, BigDecimal deductible, String details) {
         StatusChange change = transitionTo(ClaimStatus.UNDER_REVIEW, TransitionSource.SYSTEM, details);
-        this.coverageLimit = coverageLimit;
-        this.deductible = deductible;
+        this.coverageLimit = Money.of(coverageLimit);
+        this.deductible = Money.of(deductible);
         return change;
     }
 

@@ -1,5 +1,6 @@
 package com.claimflow.payment.payment;
 
+import com.claimflow.common.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -74,7 +75,7 @@ public class Payment {
         this.claimId = claimId;
         this.claimNumber = claimNumber;
         this.settlementId = settlementId;
-        this.amount = amount;
+        this.amount = Money.of(amount);
         this.correlationId = correlationId;
         this.status = PaymentStatus.INITIATED;
     }

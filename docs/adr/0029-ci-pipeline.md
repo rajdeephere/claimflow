@@ -21,6 +21,8 @@ slow feedback and makes it hard to see *what kind* of test failed.
   3. job summary with test counts per module; upload coverage, and test reports on failure
   4. **Docker images, one matrix job per service, only if every test passed** (`needs:`), with the
      GitHub Actions layer cache (`cache-from/to: type=gha`)
+  5. **API tests** (added after the Postman collection): `docker compose --profile apps up --build --wait`,
+     then the Postman collection with Newman (JUnit report uploaded; service logs printed on failure)
 - `concurrency` cancels superseded runs on the same branch; `permissions: contents: read` (least privilege).
 - Images are **built, not pushed**, by default; pushing to GHCR on `main` is a documented opt-in.
 

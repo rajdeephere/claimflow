@@ -1,5 +1,6 @@
 package com.claimflow.policy.policy;
 
+import com.claimflow.common.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,8 +43,8 @@ public class Coverage {
         this.id = UUID.randomUUID();
         this.policy = policy;
         this.coverageType = coverageType;
-        this.limitAmount = limitAmount;
-        this.deductible = deductible;
+        this.limitAmount = Money.of(limitAmount);   // scale 2 from the start (BUG-017)
+        this.deductible = Money.of(deductible);
     }
 
     public UUID getId() {

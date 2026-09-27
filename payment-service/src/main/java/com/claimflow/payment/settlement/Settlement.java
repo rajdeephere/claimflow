@@ -1,5 +1,6 @@
 package com.claimflow.payment.settlement;
 
+import com.claimflow.common.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -56,10 +57,10 @@ public class Settlement {
         this.id = UUID.randomUUID();
         this.claimId = claimId;
         this.claimNumber = claimNumber;
-        this.claimedAmount = claimedAmount;
-        this.approvedAmount = approvedAmount;
-        this.deductible = deductible;
-        this.coverageLimit = coverageLimit;
+        this.claimedAmount = Money.of(claimedAmount);   // amounts from events: normalise too (BUG-017)
+        this.approvedAmount = Money.of(approvedAmount);
+        this.deductible = Money.of(deductible);
+        this.coverageLimit = Money.of(coverageLimit);
         this.payableAmount = result.payable();
         this.cappedAtLimit = result.cappedAtLimit();
         this.calculatedAt = calculatedAt;

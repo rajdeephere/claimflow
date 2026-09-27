@@ -1,4 +1,5 @@
 # Git push -> Build -> Unit tests -> Integration tests -> Quality checks -> Docker build -> Image
+#                                                            \-> API tests (whole stack + Postman/Newman)
 name: CI
 
 on:
@@ -90,3 +91,34 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.module }}
           cache-to: type=gha,mode=max,scope=${{ matrix.module }}
+
+  api-tests:
+    name: API tests (full stack + Postman collection)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the platform (infra + 5 services)
+        run: docker compose --profile apps up -d --build --wait
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run the Postman collection with Newman
+        run: |
+          npx --yes newman@6 run postman/ClaimFlow.postman_collection.json             -e postman/ClaimFlow-local.postman_environment.json             --folder "0. Health" --folder "1. Policy Service" --folder "2. Adjusters"             --folder "3. Claim Service" --folder "4. Payment Service"             --folder "5. End-to-end journey (Runner)" --folder "6. Error handling and edge cases"             --reporters cli,junit --reporter-junit-export newman-results.xml
+
+      - name: Service logs (on failure)
+        if: failure()
+        run: docker compose --profile apps logs --no-color --tail=200
+
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: newman-results.xml
+          retention-days: 7
