@@ -24,6 +24,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -148,6 +149,14 @@ public class ClaimService {
         return claim;
     }
 
+    /** Validation passed (from ClaimValidated): store the confirmed coverage terms and start review. */
+    @Transactional
+    public Claim markValidated(UUID claimId, BigDecimal coverageLimit, BigDecimal deductible, String details) {
+        Claim claim = get(claimId);
+        record(claim, claim.markValidated(coverageLimit, deductible, details), SYSTEM_ACTOR);
+        return claim;
+    }
+
     /** System-driven status change, called by the Kafka consumer (InboundEventHandler). */
     @Transactional
     public Claim applySystemTransition(UUID claimId, ClaimStatus target, String details) {
@@ -206,7 +215,7 @@ public class ClaimService {
             case CLAIM_APPROVED -> outbox.append(Topics.CLAIM_EVENTS, EventTypes.CLAIM_APPROVED, c.getId(),
                     new ClaimEvents.ClaimApproved(c.getId(), c.getClaimNumber(), c.getPolicyId(),
                             c.getLossType().name(), c.getIncidentDate(), c.getClaimedAmount(),
-                            c.getApprovedAmount()));
+                            c.getApprovedAmount(), c.getCoverageLimit(), c.getDeductible()));
             case CLAIM_REJECTED -> outbox.append(Topics.CLAIM_EVENTS, EventTypes.CLAIM_REJECTED, c.getId(),
                     new ClaimEvents.ClaimRejected(c.getId(), c.getClaimNumber(), c.getRejectionReason()));
             case CLAIM_CLOSED -> outbox.append(Topics.CLAIM_EVENTS, EventTypes.CLAIM_CLOSED, c.getId(),

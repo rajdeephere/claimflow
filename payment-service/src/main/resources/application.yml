@@ -17,6 +17,40 @@ spring:
         jdbc.time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    consumer:
+      group-id: payment-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record
+
+claimflow:
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
+  kafka:
+    retry:
+      initial-interval-ms: 500
+      max-retries: 3
+  payment:
+    processor:
+      poll-interval-ms: 1000
+      batch-size: 50
+      max-attempts: 5              # gateway unavailable this many times -> FAILED, manual review
+    gateway:
+      latency-ms: 200              # simulated bank transfer time
+      decline-above: 1000000.00    # simulated bank limit: larger transfers are declined
 
 management:
   endpoints:

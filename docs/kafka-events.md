@@ -6,9 +6,9 @@
 
 | Topic | Producer | Consumers (group) | Key | Partitions |
 |---|---|---|---|---|
-| `claim.events` | claim-service (via outbox) | validation-service (`validation-service`, uses `ClaimSubmitted`), payment-service *(Phase 6)* | claimId | 3 |
+| `claim.events` | claim-service (via outbox) | validation-service (`validation-service`, uses `ClaimSubmitted`), payment-service (`payment-service`, uses `ClaimApproved`) | claimId | 3 |
 | `validation.events` | validation-service | claim-service (`claim-service`) | claimId | 3 |
-| `payment.events` | payment-service *(Phase 6)* | claim-service (`claim-service`) | claimId | 3 |
+| `payment.events` | payment-service (via outbox) | claim-service (`claim-service`) | claimId | 3 |
 | `<topic>.DLT` | Spring Kafka `DeadLetterPublishingRecoverer` | humans / replay tooling | original key | 3 |
 
 **Key = claimId**, so all events of one claim land on the same partition and are consumed **in order**.
@@ -47,7 +47,7 @@ Amounts are plain decimals with their scale preserved (`200000.00`, never `2E+5`
 | Event | When | Payload |
 |---|---|---|
 | `ClaimSubmitted` | FNOL accepted | `claimId, claimNumber, policyId, lossType, incidentDate, claimedAmount` |
-| `ClaimApproved` | adjuster approves (claim → SETTLEMENT_PENDING) | `claimId, claimNumber, policyId, lossType, incidentDate, claimedAmount, approvedAmount` |
+| `ClaimApproved` | adjuster approves (claim → SETTLEMENT_PENDING) | `claimId, claimNumber, policyId, lossType, incidentDate, claimedAmount, approvedAmount, coverageLimit, deductible` (terms added in Phase 6, ADR-0025) |
 | `ClaimRejected` | validation failed, or adjuster rejects | `claimId, claimNumber, reason` |
 | `ClaimClosed` | claim closed | `claimId, claimNumber` |
 

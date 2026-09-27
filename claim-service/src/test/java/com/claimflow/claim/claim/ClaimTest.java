@@ -114,6 +114,30 @@ class ClaimTest {
         }
 
         @Test
+        void approvalMustExceedValidatedDeductible() {
+            Claim claim = newClaim();
+            claim.markValidated(new BigDecimal("500000.00"), new BigDecimal("20000.00"), "validated");
+            claim.assignAdjuster(UUID.randomUUID());
+
+            assertThatThrownBy(() -> claim.approve(new BigDecimal("20000.00")))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("nothing would be payable");
+            claim.approve(new BigDecimal("20000.01"));   // one paisa above is payable
+            assertThat(claim.getStatus()).isEqualTo(ClaimStatus.APPROVED);
+        }
+
+        @Test
+        void markValidatedStoresCoverageTerms() {
+            Claim claim = newClaim();
+
+            StatusChange change = claim.markValidated(new BigDecimal("500000.00"), new BigDecimal("20000.00"), "ok");
+
+            assertThat(change.newStatus()).isEqualTo(ClaimStatus.UNDER_REVIEW);
+            assertThat(claim.getCoverageLimit()).isEqualTo(new BigDecimal("500000.00"));
+            assertThat(claim.getDeductible()).isEqualTo(new BigDecimal("20000.00"));
+        }
+
+        @Test
         void approvalAmountIsRequired() {
             assertThatThrownBy(() -> underReviewWithAdjuster().approve(null))
                     .isInstanceOf(BusinessRuleException.class);

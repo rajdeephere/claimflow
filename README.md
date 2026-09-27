@@ -49,7 +49,7 @@ Call services through the gateway: `http://localhost:8000/api/v1/...`
 - [x] [Phase 3 — Claim Service](docs/phases/phase-03-claim-service.md): FNOL, state machine, audit trail, adjusters
 - [x] [Phase 4 — Kafka](docs/phases/phase-04-kafka.md): transactional outbox, idempotent consumers, retry → DLT, correlation headers
 - [x] [Phase 5 — Validation Service](docs/phases/phase-05-validation-service.md): rules engine, policy coverage check, outage-tolerant retries
-- [ ] Phase 6 — Payment & settlement
+- [x] [Phase 6 — Payment Service](docs/phases/phase-06-payment-service.md): settlement, idempotent payments, full lifecycle end to end
 - [ ] Phase 7 — Optimistic locking, security, SQL optimisation
 - [ ] Phase 8 — Tests (JUnit, Mockito, Testcontainers) & GitHub Actions CI
 - [ ] Phase 9 — Docs

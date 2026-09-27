@@ -28,5 +28,8 @@ To add one, copy [`template.md`](template.md).
 | [0020](0020-exact-decimal-json.md) | Exact-decimal JSON settings (extends 0010) | Accepted | 4 |
 | [0021](0021-deterministic-event-ids-for-stateless-idempotency.md) | Deterministic event IDs for stateless idempotency | Accepted | 5 |
 | [0022](0022-classifying-consumer-failures.md) | Classifying consumer failures: retry, long retry, DLT, ignore | Accepted | 5 |
+| [0023](0023-payment-idempotency-and-gateway-call-outside-transaction.md) | Payment idempotency; gateway call outside the transaction | Accepted | 6 |
+| [0024](0024-duplicate-outbox-code-rule-of-three.md) | Copy the outbox code rather than share it (rule of three) | Accepted | 6 |
+| [0025](0025-event-carried-coverage-terms.md) | Coverage terms travel with the events | Accepted | 6 |
 
 **Status lifecycle:** Proposed → Accepted → (Deprecated | Superseded by ADR-XXXX)

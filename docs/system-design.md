@@ -149,7 +149,8 @@ sequenceDiagram
     Note over CS: Adjuster assigned and approves (REST)
     CS-->>K: ClaimApproved
     K-->>PAY: ClaimApproved
-    PAY->>PAY: dedupe on eventId, calc settlement, insert payment
+    PAY->>PAY: dedupe on eventId, settlement = min(approved - deductible, limit), payment INITIATED
+    PAY->>PAY: processor pays via gateway (idempotency key = paymentId)
     PAY-->>K: PaymentInitiated, PaymentCompleted
     K-->>CS: PaymentCompleted
     CS->>CS: → SETTLED
@@ -296,7 +297,8 @@ Plus a `processed_events(event_id PK, consumer_name, processed_at)` table in eve
 | Consumer crashes mid-processing | Offset not committed, so the event is redelivered and the idempotency check prevents double effects. |
 | Poison message (always fails) | After N retries it goes to the DLT; the consumer moves on and the partition doesn't block. |
 | Concurrent claim update | `@Version` optimistic lock returns **409**; the client reloads and retries. |
-| Payment fails | Payment row kept as `FAILED`, retryable, visible for manual review; claim stays `PAYMENT_INITIATED`. |
+| Payment fails | Declined: payment `FAILED` + `PaymentFailed`, recorded in claim history, claim stays `PAYMENT_INITIATED` for manual review. Gateway unavailable: retried with the same idempotency key up to 5 times, then FAILED. (ADR-0023) |
+| Same approval delivered twice / replayed | 1 payment, 1 bank transfer (processed_events, existing-payment check, UNIQUE, gateway idempotency key). Verified live by replaying the real event. |
 | DB commit succeeds but event publish fails (dual write) | Transactional outbox (ADR-0012): the event is committed with the change and relayed later. Verified with Kafka stopped: FNOL 201, event published after Kafka restarted. |
 | Malformed or impossible event | Straight to `<topic>.DLT`, no retries; the partition keeps flowing. |
 

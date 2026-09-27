@@ -134,4 +134,18 @@ PATCH /api/v1/claims/{claimId}/status
 
 ## Payment Service: Phase 6
 
-*To be designed.*
+Payments are **created by events only** (`ClaimApproved`); the API is read-only.
+
+```http
+GET /api/v1/payments?claimId=c3d97818-...
+GET /api/v1/payments/{paymentId}
+```
+```json
+{ "id": "0cf61f3b-...", "claimId": "c3d97818-...", "claimNumber": "CLM-2026-000010",
+  "amount": 180000.00, "status": "COMPLETED", "gatewayReference": "TRF-0CF61F3B",
+  "failureReason": null, "attempts": 1, "createdAt": "...", "completedAt": "...",
+  "settlement": { "approvedAmount": 200000.00, "deductible": 20000.00, "coverageLimit": 500000.00,
+                  "payableAmount": 180000.00, "cappedAtLimit": false } }
+```
+404 if the claim has no payment. Claim responses now also include `coverageLimit` and `deductible`,
+and approving an amount not above the deductible returns **422**.

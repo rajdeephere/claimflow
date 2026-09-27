@@ -40,6 +40,20 @@
 | Same `ClaimSubmitted` delivered twice | same output eventId, deduped downstream | integration |
 | Result arrives after the claim moved on (replay, re-validation) | claim-service logs "Stale … ignoring" and acknowledges; no DLT | unit test (the live replay found BUG-011; the fix was verified by the unit test, not re-run live) |
 
+## Payment Service (Phase 6)
+
+| Failure | Behaviour | Verified |
+|---|---|---|
+| Same `ClaimApproved` twice | skipped by `processed_events` | integration + **live replay** |
+| Different event for an already-paid claim | "already has a payment; ignoring" | integration + **live replay** |
+| Both application checks bypassed | `UNIQUE (claim_id)` rejects the second payment | integration (direct insert) |
+| Crash after the bank paid, before recording | retry uses the same idempotency key, and the gateway returns the original result | unit (key = paymentId) + design (ADR-0023) |
+| Bank declines | payment FAILED, `PaymentFailed`; claim-service records it; claim stays PAYMENT_INITIATED for manual review | integration |
+| Gateway unavailable | stays INITIATED, retried each tick with the same key; FAILED after 5 attempts | unit |
+| Two processor instances on one payment | gateway idempotency + `@Version`; the loser logs and moves on | design |
+| `ClaimApproved` without coverage terms (claim validated before Phase 6) | DLT (a human must decide) | integration |
+| Approved amount not above the deductible | refused at approval in Claim Service (422), so it never reaches Payment | unit + live |
+
 ## Dead Letter Topics
 
 - Name: `<original-topic>.DLT`, same partition as the original.

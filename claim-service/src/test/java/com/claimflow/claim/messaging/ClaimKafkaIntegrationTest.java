@@ -248,8 +248,11 @@ class ClaimKafkaIntegrationTest extends AbstractIntegrationTest {
 
         ConsumerRecord<String, String> approved =
                 awaitRecord(event(Topics.CLAIM_EVENTS, EventTypes.CLAIM_APPROVED, claimId));
-        assertThat(mapper.readTree(approved.value()).get("payload").get("approvedAmount").decimalValue())
-                .isEqualTo(new BigDecimal("180000.00"));
+        JsonNode approvedPayload = mapper.readTree(approved.value()).get("payload");
+        assertThat(approvedPayload.get("approvedAmount").decimalValue()).isEqualTo(new BigDecimal("180000.00"));
+        // coverage terms from ClaimValidated are carried to Payment (event-carried state transfer)
+        assertThat(approvedPayload.get("coverageLimit").decimalValue()).isEqualByComparingTo("500000");
+        assertThat(approvedPayload.get("deductible").decimalValue()).isEqualByComparingTo("20000");
         assertThat(status(claimId)).isEqualTo("SETTLEMENT_PENDING");
 
         // Payment Service's events (simulated until Phase 6)

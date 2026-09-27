@@ -75,7 +75,7 @@ class InboundEventHandlerTest {
 
         handler().handle(event);
 
-        verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.UNDER_REVIEW),
+        verify(claims).markValidated(eq(claimId), eq(new BigDecimal("500000")), eq(new BigDecimal("20000")),
                 eq("Validated: coverage limit 500000, deductible 20000"));
     }
 
@@ -89,7 +89,7 @@ class InboundEventHandlerTest {
 
         handler().handle(event);
 
-        verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.UNDER_REVIEW),
+        verify(claims).markValidated(eq(claimId), any(), any(),
                 eq("Validated: coverage limit 100000, deductible 5000; warnings: "
                         + "Claimed amount exceeds coverage limit; payout will be capped"));
     }
@@ -104,7 +104,7 @@ class InboundEventHandlerTest {
 
         handler().handle(event);
 
-        verify(claims).applySystemTransition(eq(claimId), eq(ClaimStatus.UNDER_REVIEW),
+        verify(claims).markValidated(eq(claimId), eq(new BigDecimal("10")), eq(new BigDecimal("1")),
                 eq("Validated: coverage limit 10, deductible 1"));
     }
 
@@ -131,6 +131,7 @@ class InboundEventHandlerTest {
         handler().handle(event);   // no exception -> no DLT
 
         verify(claims, never()).applySystemTransition(any(), any(), any());
+        verify(claims, never()).markValidated(any(), any(), any(), any());
     }
 
     @Test

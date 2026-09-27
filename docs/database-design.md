@@ -156,6 +156,12 @@ erDiagram
 | `idx_claim_history_claim_created (claim_id, created_at, id)` | `GET /claims/{id}/history` in order |
 | *(Phase 7)* `idx_claim_policy_status_created (policy_id, status, created_at DESC)` | `GET /claims?policyId=&status=`, added with EXPLAIN ANALYZE before/after |
 
+### Coverage terms (Phase 6, `V3__claim_coverage_terms.sql`)
+
+`coverage_limit` and `deductible` (both `NUMERIC(15,2)`, nullable until validation) store the terms
+confirmed by `ClaimValidated`; `ck_claims_coverage_terms` requires both or neither
+([ADR-0025](adr/0025-event-carried-coverage-terms.md)).
+
 ### Messaging tables (Phase 4, `V2__outbox_and_processed_events.sql`)
 
 | Table | Purpose | Key points |
@@ -176,4 +182,47 @@ transaction as the claim change ([ADR-0018](adr/0018-append-only-claim-history.m
 
 ## payment_db (Payment Service): Phase 6
 
-*To be designed.*
+```mermaid
+erDiagram
+    settlements ||--|| payments : "paid by"
+
+    settlements {
+        uuid id PK
+        uuid claim_id UK
+        varchar claim_number
+        numeric claimed_amount "15,2"
+        numeric approved_amount "15,2"
+        numeric deductible "15,2"
+        numeric coverage_limit "15,2"
+        numeric payable_amount "15,2"
+        boolean capped_at_limit
+        timestamptz calculated_at
+    }
+    payments {
+        uuid id PK "also the gateway idempotency key"
+        uuid claim_id UK "one payment per claim"
+        varchar claim_number
+        uuid settlement_id FK
+        numeric amount "15,2"
+        varchar status "INITIATED | COMPLETED | FAILED"
+        varchar gateway_reference
+        varchar failure_reason
+        int attempts
+        varchar correlation_id
+        bigint version
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz completed_at
+    }
+```
+
+| Constraint / index | Purpose |
+|---|---|
+| `uk_payments_claim UNIQUE (claim_id)` | **last line of defence against double payment** ([ADR-0023](adr/0023-payment-idempotency-and-gateway-call-outside-transaction.md)) |
+| `uk_settlements_claim UNIQUE (claim_id)` | one settlement calculation per claim |
+| `ck_settlements_payable` | `0 < payable_amount <= coverage_limit` |
+| `ck_payments_amount`, `ck_payments_status` | positive amount, valid status |
+| `idx_payments_initiated (created_at) WHERE status = 'INITIATED'` | partial index for the processor's polling query |
+| `outbox_events`, `processed_events` | same as claim_db (copied design, [ADR-0024](adr/0024-duplicate-outbox-code-rule-of-three.md)) |
+
+`settlements` is `@Immutable`: the calculation that justified a payout is never altered.

@@ -61,7 +61,7 @@ public class InboundEventHandler {
                 }
                 String details = "Validated: coverage limit " + p.coverageLimit() + ", deductible " + p.deductible()
                         + (p.warnings().isEmpty() ? "" : "; warnings: " + String.join("; ", p.warnings()));
-                claims.applySystemTransition(p.claimId(), ClaimStatus.UNDER_REVIEW, details);
+                claims.markValidated(p.claimId(), p.coverageLimit(), p.deductible(), details);
             }
             case EventTypes.CLAIM_VALIDATION_FAILED -> {
                 ClaimValidationFailed p = mapper.treeToValue(event.payload(), ClaimValidationFailed.class);

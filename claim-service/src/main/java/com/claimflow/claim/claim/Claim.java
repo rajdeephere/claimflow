@@ -59,6 +59,13 @@ public class Claim {
     @Column(precision = 15, scale = 2)
     private BigDecimal approvedAmount;
 
+    // Confirmed by validation; carried to Payment in ClaimApproved.
+    @Column(precision = 15, scale = 2)
+    private BigDecimal coverageLimit;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal deductible;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ClaimStatus status;
@@ -134,6 +141,10 @@ public class Claim {
         if (amount.compareTo(claimedAmount) > 0) {
             throw new BusinessRuleException("Approved amount " + amount + " exceeds claimed amount " + claimedAmount);
         }
+        if (deductible != null && amount.compareTo(deductible) <= 0) {
+            throw new BusinessRuleException("Approved amount " + amount + " does not exceed the deductible "
+                    + deductible + ": nothing would be payable; reject the claim instead");
+        }
         approvedAmount = amount;
         return transitionTo(ClaimStatus.APPROVED, TransitionSource.USER, "Approved amount " + amount);
     }
@@ -150,6 +161,14 @@ public class Claim {
 
     public StatusChange close() {
         return transitionTo(ClaimStatus.CLOSED, TransitionSource.USER, null);
+    }
+
+    /** Validation passed: remember the coverage terms it confirmed, then move to UNDER_REVIEW. */
+    public StatusChange markValidated(BigDecimal coverageLimit, BigDecimal deductible, String details) {
+        StatusChange change = transitionTo(ClaimStatus.UNDER_REVIEW, TransitionSource.SYSTEM, details);
+        this.coverageLimit = coverageLimit;
+        this.deductible = deductible;
+        return change;
     }
 
     public StatusChange assignAdjuster(UUID newAdjusterId) {
@@ -206,6 +225,14 @@ public class Claim {
 
     public BigDecimal getApprovedAmount() {
         return approvedAmount;
+    }
+
+    public BigDecimal getCoverageLimit() {
+        return coverageLimit;
+    }
+
+    public BigDecimal getDeductible() {
+        return deductible;
     }
 
     public ClaimStatus getStatus() {

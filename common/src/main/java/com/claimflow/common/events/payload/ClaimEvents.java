@@ -20,8 +20,13 @@ public final class ClaimEvents {
                                  LocalDate incidentDate, BigDecimal claimedAmount) {
     }
 
+    /**
+     * {@code coverageLimit} and {@code deductible} were added in Phase 6 (optional, non-breaking): the
+     * terms validation confirmed, so Payment can settle without calling Policy Service.
+     */
     public record ClaimApproved(UUID claimId, String claimNumber, UUID policyId, String lossType,
-                                LocalDate incidentDate, BigDecimal claimedAmount, BigDecimal approvedAmount) {
+                                LocalDate incidentDate, BigDecimal claimedAmount, BigDecimal approvedAmount,
+                                BigDecimal coverageLimit, BigDecimal deductible) {
     }
 
     public record ClaimRejected(UUID claimId, String claimNumber, String reason) {
